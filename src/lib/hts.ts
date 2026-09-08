@@ -31,6 +31,14 @@ export function isHederaOperatorConfigured() {
   return Boolean(operatorAccountId() && operatorPrivateKeyRaw());
 }
 
+export function getOperatorAccountId() {
+  return operatorAccountId();
+}
+
+export function getOperatorPrivateKeyRaw() {
+  return operatorPrivateKeyRaw();
+}
+
 export function getBackerAccountId() {
   return process.env.HEDERA_BACKER_ACCOUNT_ID ?? "";
 }

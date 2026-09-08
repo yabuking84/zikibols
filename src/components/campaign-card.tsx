@@ -12,6 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import {
   assetClassLabel,
   fundedPercent,
+  isSeedCatalog,
   type Campaign,
 } from "@/lib/campaigns";
 import { hbar } from "@/lib/money";
@@ -31,7 +32,12 @@ export function CampaignCard({ campaign }: { campaign: Campaign }) {
         </CardHeader>
         <CardContent className="space-y-2">
           <div className="flex text-sm">
-            <span className="font-medium">{hbar(campaign.pledgedHbar)} pledged</span>
+            <span className="font-medium">
+              {hbar(campaign.pledgedHbar)} pledged
+              {isSeedCatalog(campaign.slug) ? (
+                <span className="font-normal text-muted-foreground"> (includes seed book)</span>
+              ) : null}
+            </span>
             <span className="ml-auto text-muted-foreground tabular-nums">{funded}%</span>
           </div>
           <Progress value={funded} />

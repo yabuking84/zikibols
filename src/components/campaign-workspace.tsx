@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   assetClassLabel,
   fundedPercent,
+  isSeedCatalog,
   type Campaign,
 } from "@/lib/campaigns";
 import type { AgentResult } from "@/lib/types";
@@ -76,6 +77,9 @@ export function CampaignWorkspace({ campaign: initial }: { campaign: Campaign })
         </div>
         <p className="text-sm text-muted-foreground">
           {campaign.backers} backers · {campaign.daysLeft} days left · {campaign.location}
+          {isSeedCatalog(campaign.slug)
+            ? " · pledged total includes a seed book plus any live Privy pledges"
+            : ""}
         </p>
         <Separator />
         <section className="space-y-3">
@@ -102,7 +106,7 @@ export function CampaignWorkspace({ campaign: initial }: { campaign: Campaign })
           <h2 className="text-base font-medium">Hedera asset</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             {campaign.tokenName} ({campaign.tokenSymbol}) is issued from the operator
-            desk: freezeable HTS share, then a coupon after 2-of-2 sign-off.
+            desk: ATS bond with whitelist and pause, then a coupon after 2-of-2 sign-off.
           </p>
           <p className="mt-2 text-xs font-medium">
             Status: {campaign.tokenLifecycle}

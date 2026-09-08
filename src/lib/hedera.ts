@@ -25,8 +25,15 @@ export function hashscanTokenUrl(tokenId: string) {
   return `https://hashscan.io/testnet/token/${tokenId}`;
 }
 
+export function hashscanContractUrl(id: string) {
+  return `https://hashscan.io/testnet/contract/${id}`;
+}
+
 export function hashscanTxUrl(txId: string) {
-  return `https://hashscan.io/testnet/transaction/${encodeURIComponent(txId)}`;
+  const trimmed = txId.trim();
+  const hedera = trimmed.match(/^(\d+\.\d+\.\d+)@(\d+)\.(\d+)$/);
+  const path = hedera ? `${hedera[1]}-${hedera[2]}-${hedera[3]}` : trimmed;
+  return `https://hashscan.io/testnet/transaction/${encodeURIComponent(path)}`;
 }
 
 export function hashscanTopicUrl(topicId: string) {

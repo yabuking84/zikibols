@@ -29,6 +29,7 @@ export type Campaign = {
   transferTxId: string | null;
   freezeTxId: string | null;
   payoutTxId: string | null;
+  couponTxId: string | null;
   backerAccountId: string | null;
   treasuryEvm: `0x${string}`;
   imageHue: string;
@@ -46,7 +47,7 @@ export const campaigns: Campaign[] = [
     creatorWallet: "0x1111111254eeb25477b68fb85ed929f73a960582",
     creatorEmail: null,
     goalHbar: 12000,
-    pledgedHbar: 4380,
+    pledgedHbar: 4380, // seed book; live Privy pledges add on top
     backers: 27,
     daysLeft: 18,
     location: "Rotterdam",
@@ -59,6 +60,7 @@ export const campaigns: Campaign[] = [
     transferTxId: null,
     freezeTxId: null,
     payoutTxId: null,
+    couponTxId: null,
     backerAccountId: null,
     treasuryEvm: "0x7d5710637321f540b9ee8e1282c598d9b78f4f91",
     imageHue: "32 42% 42%",
@@ -74,7 +76,7 @@ export const campaigns: Campaign[] = [
     creatorWallet: "0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503",
     creatorEmail: null,
     goalHbar: 8000,
-    pledgedHbar: 6120,
+    pledgedHbar: 6120, // seed book; live Privy pledges add on top
     backers: 41,
     daysLeft: 9,
     location: "Friesland",
@@ -87,6 +89,7 @@ export const campaigns: Campaign[] = [
     transferTxId: null,
     freezeTxId: null,
     payoutTxId: null,
+    couponTxId: null,
     backerAccountId: null,
     treasuryEvm: "0x7d5710637321f540b9ee8e1282c598d9b78f4f91",
     imageHue: "152 28% 32%",
@@ -125,6 +128,11 @@ export function toCatalogItem(campaign: Pick<Campaign, "slug" | "title" | "token
 }
 
 export const RESERVED_SLUGS = new Set(["new"]);
+
+/** Harbor Credit and Northwind Farms ship with fixture pledged totals. */
+export function isSeedCatalog(slug: string) {
+  return campaigns.some((campaign) => campaign.slug === slug);
+}
 
 export function slugifyCampaign(title: string) {
   const slug = title

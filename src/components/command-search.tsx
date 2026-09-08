@@ -41,7 +41,7 @@ export function CommandSearch() {
         {
           href: `/campaigns/${campaign.slug}/operate`,
           title: `${campaign.tokenSymbol} operator desk`,
-          hint: `Issue, freeze, coupon · ${campaign.title}`,
+          hint: `Issue, pause, coupon · ${campaign.title}`,
         },
       ]),
     ];

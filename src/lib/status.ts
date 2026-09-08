@@ -1,4 +1,5 @@
-import { isHederaOperatorConfigured, getBackerAccountId } from "@/lib/hts";
+import { getBackerAccountId } from "@/lib/hts";
+import { isAtsConfigured } from "@/lib/ats";
 import { isSearchConfigured } from "@/lib/founder-search";
 import { isX402Ready } from "@/lib/x402";
 
@@ -17,8 +18,7 @@ export function getIntegrationStatus(): IntegrationStatus {
     privy: Boolean(process.env.NEXT_PUBLIC_PRIVY_APP_ID),
     graph: Boolean(process.env.THEGRAPH_API_KEY),
     x402,
-    hts: isHederaOperatorConfigured(),
-    // Founder search is sold over x402, so it is only Ready when the agent can pay.
+    hts: isAtsConfigured(),
     search: isSearchConfigured() && x402,
     backer: Boolean(getBackerAccountId()),
   };

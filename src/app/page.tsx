@@ -19,7 +19,7 @@ import { hbar } from "@/lib/money";
 const steps = [
   {
     title: "Check the creator",
-    body: "The agent reads live Aave v3, Compound v3, and Spark Lend, searches the public web for the founder’s name and email, pays Hedera x402 for a written risk note, then hashes that note onto HCS.",
+    body: "The agent reads live Aave v3, Compound v3, and Spark Lend, then pays Hedera x402 twice: public-web founder research (per query) and a written risk note. Both payment ids land on HCS.",
   },
   {
     title: "Pledge with Privy",
@@ -27,7 +27,7 @@ const steps = [
   },
   {
     title: "Tokenize and pay out",
-    body: "On the operator desk, issue an HTS bond/share, airdrop, freeze, then release a coupon after a 2-of-2 founder + operator sign-off.",
+    body: "On the operator desk, issue an ATS bond, mint one share, pause it, then release a coupon after a 2-of-2 founder + operator sign-off.",
   },
 ];
 
@@ -46,7 +46,7 @@ export default async function Home() {
     {
       label: "Pledged",
       value: hbar(pledged),
-      hint: `${backers} backers across the book`,
+      hint: `${backers} backers (seed books + live pledges)`,
       icon: Wallet,
     },
     {
@@ -57,7 +57,7 @@ export default async function Home() {
     },
     {
       label: "Hedera",
-      value: "x402 + HTS",
+      value: "x402 + ATS",
       hint: "Paid diligence and tokens",
       icon: Shield,
     },

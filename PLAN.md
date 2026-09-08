@@ -73,52 +73,52 @@ Extra points we target:
 | Extra point | Plan |
 |---|---|
 | Verifiable payment audit trails on HCS | **Done.** `src/lib/hcs.ts` publishes `noteSha256`, `profileSha256`, and x402 tx ids to topic `0.0.10421775`. Say it in README and video. |
-| Pay-per-call metering rather than a flat charge | **Build.** Second service `POST /api/founder-search` wraps Tavily behind x402, priced per query (1 query without email, 2 with). |
+| Pay-per-call metering rather than a flat charge | **Met.** Second service `POST /api/founder-search/{1|2}` wraps Tavily behind x402, priced per query. |
 | On-chain agent identity (HCS-14) / agent discovery | Optional, last. See "Hedera Agent Kit decision". |
 
 **Hedera Agent Kit decision.** We do **not** replace Tavily with the Hedera Agent Kit or the Hashgraph Online Standards Agent Kit. Neither does web search (the Agent Kit docs tell you to add Tavily alongside it); both add LangChain and an agent-loop rewrite; and this track is judged on the paid service and the paying agent, not on the framework. What strengthens the track is making founder research itself an x402 service (above). If every other item is done, the Agent Kit can be used for an HCS-14 identity record as decoration; it is not on the critical path.
 
 Work items:
 
-- [ ] `src/app/api/founder-search/route.ts`: x402-gated, same pattern as `risk-report`; body = campaign name/email/title/location; returns `FounderProfile`; 503 with a labeled reason if `TAVILY_API_KEY` is missing.
-- [ ] `buyFounderProfile` in `src/lib/x402.ts`; agent pays it in `runDueDiligence` before `buyRiskReport`; both settlement tx ids into `payment[]` and the HCS message.
-- [ ] Price per query: route config price = `X402_PRICE_TINYBARS × queries`.
-- [ ] README: payment-flow section shows two paid requests; `curl` of the 402 challenge; "HCS audit trail" called out as the extra point.
+- [x] `src/app/api/founder-search/[queries]/route.ts`: x402-gated, same pattern as `risk-report`; body = campaign name/email/title/location; returns `FounderProfile`; 503 with a labeled reason if `TAVILY_API_KEY` is missing.
+- [x] `buyFounderProfile` in `src/lib/x402.ts`; agent pays it in `runDueDiligence` before `buyRiskReport`; both settlement tx ids into `payments[]` and the HCS message.
+- [x] Price per query: route config price = `X402_PRICE_TINYBARS × queries` (`/1` vs `/2`).
+- [x] README: payment-flow section shows two paid requests; `curl` of the 402 challenge; "HCS audit trail" called out as the extra point.
 - [ ] Video (≤5 min): both HashScan payment txs and the HCS topic in frame.
 
 ### 2. Hedera — Tokenization of Anything ($6,000, up to 3 × $2,000)
 
 | Requirement | Where we stand |
 |---|---|
-| Use the Asset Tokenization Studio (SDK, contracts, web application, or a combination) to issue or manage a tokenised asset | **Not met.** `src/lib/hts.ts` uses `TokenCreateTransaction`; no ATS package installed. Raw HTS does not qualify. |
-| Deploy and demonstrate on Hedera testnet | Met once ATS is wired |
-| Public GitHub repo, with contracts verified on HashScan where applicable | ATS factory/resolver are Hedera-deployed; our bond is a diamond clone. Link the clone's contract page on HashScan. |
+| Use the Asset Tokenization Studio (SDK, contracts, web application, or a combination) to issue or manage a tokenised asset | **Met.** `src/lib/ats.ts` uses `@hashgraph/asset-tokenization-sdk` v8: `Bond.create`, `Security.issue`, `Security.pause`, plus `ICoupon.setCoupon` on the diamond. Harbor bond [`0.0.10423725`](https://hashscan.io/testnet/contract/0.0.10423725); coupon [`0x35fd434f…`](https://hashscan.io/testnet/transaction/0x35fd434f02a91089f878fa70848c7fa29a87afd63ae9bc52b98733cceb29c1ad). |
+| Deploy and demonstrate on Hedera testnet | **Met.** Issue / mint / pause txs on HashScan for Harbor Credit |
+| Public GitHub repo, with contracts verified on HashScan where applicable | ATS factory `0.0.9213391` / resolver `0.0.9212226` are Hedera-deployed; our bond is a diamond clone. Link the clone's contract page on HashScan. |
 | Demo video ≤5 min showing issuance, configuration, and at least one lifecycle operation (transfer, compliance check, or distribution) | Open |
 
 Extra points we target: compliance controls in use (pause, control list), coupon record.
 
-**Route.** `@hashgraph/asset-tokenization-sdk` v8 from the Next.js server with a private-key signer. The SDK README says "only metamask is compatible right now", but ATS's own CI runs the SDK tests against testnet with `CLIENT_PRIVATE_KEY_ECDSA_*`, so a headless path exists. Testnet factory `0.0.6797955`, resolver `0.0.6797832` (verify against `apps/ats/web/.env.example` in the ATS repo; business-logic config keys come from the same file). Operator must be an **ECDSA** account with an EVM alias. Fallback route if the SDK will not import server-side: call the Factory `deployBond` ABI from `@hashgraph/asset-tokenization-contracts` with viem over `https://testnet.hashio.io/api`.
+**Route.** `@hashgraph/asset-tokenization-sdk` v8 from the Next.js server with a private-key signer. The SDK README says "only metamask is compatible right now"; we stub `window` only around `Network.connect` (`debug: true`) and inject an ethers `Wallet`. Testnet factory `0.0.9213391`, resolver `0.0.9212226`, bond config id `…0002`. Operator must be an **ECDSA** account with an EVM alias. Create uses internal KYC on (required for `deployBond` encoding), then `deactivateInternalKyc` so minting does not need a Terminal3 VC.
 
-**Kill criterion.** Wednesday 9 Sep, 4-hour spike: *a Node script deploys a bond on testnet with the operator key.* If it does not land by hour 4, stop, keep HTS as the token layer, and remove this track from the pitch. Deploy and video outrank this.
+**Kill criterion.** **Go.** `/tmp/ats-spike` deployed diamond `0.0.10423104` (tx `0x15b7a5cf…`) and applied issuer / control-list / pauser roles.
 
-Lifecycle mapping (if go):
+Lifecycle mapping:
 
-| Zikibols step | Today (HTS) | ATS |
-|---|---|---|
-| Issue | `TokenCreateTransaction` | `Bond.create` (fixed rate; nominal = goal, currency HBAR, maturity = `daysLeft`) → diamond address |
-| Transfer share | `TokenAirdropTransaction` to `0.0.x` via mirror mapping | `Security.issue` 1 unit to the backer's **Privy EVM address** directly (Minter role); no mirror mapping |
-| Freeze / pause | `TokenFreezeTransaction` / `TokenPauseTransaction` | `Security.pause` or `Security.addToControlList(backer)` — the "compliance check" op |
-| Coupon | HBAR transfer after 2-of-2 | `Bond.setCoupon` record on-chain **plus** the existing HBAR payout after 2-of-2. ATS coupon is an entitlement record; distribution in ATS is the separate Mass Payout service, which we do not run. Say so. |
+| Zikibols step | ATS |
+|---|---|
+| Issue | `Bond.create` → diamond address in `Campaign.tokenId` |
+| Mint share | `Security.addToControlList` then `Security.issue` 1 unit to the backer's Privy EVM address |
+| Pause | `Security.pause` — the "compliance check" op |
+| Coupon | ATS `ICoupon.setCoupon` on the diamond (SDK `Coupon.setCoupon` sent empty calldata under Next) **plus** the existing HBAR payout after 2-of-2. ATS coupon is an entitlement record; we do not run Mass Payout. |
 
 Work items:
 
-- [ ] Spike (`/tmp` script, not in repo): init SDK, connect with operator key, `Bond.create`, read back on mirror. Decide by 13:00 Wed.
-- [ ] `src/lib/ats.ts`: `issueBond`, `mintToBacker`, `pauseOrControlList`, `setCouponRecord`; `Campaign.tokenId` holds the diamond address; `hashscanContractUrl`.
-- [ ] `token` route: `issue` → ATS; `transfer` → mint to `latest pledge wallet` (EVM) with `0.0.x` no longer required; `freeze` → pause/control list.
-- [ ] `payout` route `release`: write `setCoupon` record, then existing `payCoupon`.
-- [ ] Token panel copy: "ATS bond (ERC-1400/3643)", contract link, lifecycle badges.
-- [ ] README: ATS section (factory/resolver ids, roles, what the coupon record is and is not).
-- [ ] `.env.example`: `ATS_FACTORY_ID`, `ATS_RESOLVER_ID`, `ATS_CONFIG_*`.
+- [x] Spike (`/tmp` script, not in repo): init SDK, connect with operator key, `Bond.create`, read details. **Go.**
+- [x] `src/lib/ats.ts`: `issueBond`, `mintToBacker`, `pauseBond`, `setCouponRecord`; `Campaign.tokenId` holds the diamond address; `hashscanContractUrl`.
+- [x] `token` route: `issue` → ATS; `transfer` → mint to backer EVM; `freeze` → pause/control list.
+- [x] `payout` route `release`: write `setCoupon` record, then existing `payCoupon`.
+- [x] Token panel copy: "ATS bond (ERC-1400/3643)", contract link, lifecycle badges.
+- [x] README: ATS section (factory/resolver ids, what the coupon record is and is not).
+- [x] `.env.example`: `ATS_FACTORY_ID`, `ATS_RESOLVER_ID`, `ATS_BOND_CONFIG_ID`.
 
 ### 3. The Graph — Best Use of Composable or Standardized Graph Products ($5,000: 2,500 / 1,500 / 1,000)
 
@@ -132,8 +132,8 @@ Work items:
 
 Work items:
 
-- [ ] Confirm all three subgraph IDs return `lendingProtocols` on the day of recording (Spark Lend first). If one is dead, swap in another Messari lending deployment; the sentence must stay "three".
-- [ ] README: a "Standards leverage" paragraph with the single query shown once.
+- [x] Confirm all three subgraph IDs return `lendingProtocols` on the day of recording (Spark Lend first). If one is dead, swap in another Messari lending deployment; the sentence must stay "three". Re-check immediately before recording.
+- [x] README: a "Standards leverage" paragraph with the single query shown once.
 - [ ] Video: the standards sentence, spoken.
 
 ### 4. The Graph — Best AI Tooling or AI Use Case with The Graph, From Scratch ($5,000: 2,500 / 1,500 / 1,000)
@@ -151,7 +151,7 @@ The track text lists "let your agent pay per query autonomously with x402" as an
 Work items:
 
 - [ ] Set `OPENAI_API_KEY` in the demo env; keep the heuristic fallback and its label.
-- [ ] README: "From scratch" statement (start date, no prior code) and a sentence on what the agent decides.
+- [x] README: "From scratch" statement (start date, no prior code) and a sentence on what the agent decides.
 - [ ] Video (2–4 min cut is the same video as Hedera's if we keep it to 4 minutes).
 
 ### 5. Privy — Best financial flow ($2,500)
@@ -162,13 +162,13 @@ Work items:
 | Create or use at least one Privy wallet | **Met.** `embeddedWallets.ethereum.createOnLogin: "users-without-wallets"` |
 | Complete at least one functional financial flow using a generally available Privy feature; transfers are eligible | **Met.** `switchChain(296)` → `sendTransaction` HBAR to the campaign treasury (`src/components/pledge-panel.tsx`); `supportedChains: [hederaTestnet]` |
 | Provide a working demo and access to the source | Deploy **open** |
-| Clearly explain how Privy improves the user experience | **Open.** One README paragraph: no extension, no seed phrase, chain switch and gas hidden, HashScan link after |
+| Clearly explain how Privy improves the user experience | **Met.** README paragraph: no extension, no seed phrase, chain switch and gas hidden, HashScan link after |
 | Mocked features do not count as the required integration | Nothing mocked |
 
 Work items:
 
-- [ ] Set `NEXT_PUBLIC_CAMPAIGN_TREASURY` to an account we control (ideally the operator's EVM alias so coupons visibly leave the same treasury that received pledges). Today it is empty and pledges go to the seed long-zero address.
-- [ ] README: "How Privy improves the flow" paragraph.
+- [x] Set `NEXT_PUBLIC_CAMPAIGN_TREASURY` to an account we control (ideally the operator's EVM alias so coupons visibly leave the same treasury that received pledges). Pinned to `0x7d5710637321f540b9ee8e1282c598d9b78f4f91`.
+- [x] README: "How Privy improves the flow" paragraph.
 - [ ] Video: login → pledge → HashScan in under 60 seconds.
 
 ### Tracks we do not claim
@@ -180,9 +180,29 @@ Work items:
 
 ### Cross-cutting submission requirements (ETHGlobal rules)
 
-- [ ] **AI tool attribution.** Rules require documenting where and how AI tools were used, and including spec/planning artifacts in the repo. `PLAN.md` is the artifact; add an "AI tools used" section to the README (files/areas assisted, tools used).
-- [ ] Submission form: partners = Hedera, The Graph, Privy; Graph AI pool = Start Fresh; five track paragraphs drafted before Saturday.
+- [x] **AI tool attribution.** Rules require documenting where and how AI tools were used, and including spec/planning artifacts in the repo. `PLAN.md` is the artifact; README has an "AI tools used" section.
+- [x] Submission form copy: partners = Hedera, The Graph, Privy; Graph AI pool = Start Fresh; five track paragraphs drafted below. Paste on Saturday.
 - [ ] Public URL live and warm at submission time.
+
+### Submission copy (paste into the Hacker Dashboard)
+
+Partners: **Hedera, The Graph, Privy**. Graph AI pool: **Start Fresh**. Do not select Privy B2B.
+
+**Hedera — AI & Agentic Payments.** Zikibols hosts two live x402 services on Hedera testnet, settled through the Blocky402 facilitator (`api.testnet.blocky402.com`): `POST /api/founder-search/{1|2}` (Tavily public-web research, priced per query) and `POST /api/risk-report` (a written risk note over live Graph books). The diligence agent pays both with `wrapFetchWithPayment` and an ECDSA Hedera signer. Settlement tx ids are shown in the UI and published with `noteSha256` and `profileSha256` to HCS topic `0.0.10421775`. A bare `curl` of either route returns HTTP 402.
+
+**Hedera — Tokenization of Anything.** After funding, the operator desk issues the campaign as an Asset Tokenization Studio bond (`@hashgraph/asset-tokenization-sdk` v8): `Bond.create` clones Hedera's testnet factory `0.0.9213391`, `Security.issue` mints one unit to the backer's Privy EVM address, `Security.pause` is the compliance op, and `ICoupon.setCoupon` records the coupon on-chain before a small HBAR payout. Harbor Credit's diamond is [`0.0.10423725`](https://hashscan.io/testnet/contract/0.0.10423725).
+
+**The Graph — Composable / standardized products.** One Messari standardized `lendingProtocols` query and one `account(id)` query run unchanged against Aave v3, Compound v3, and Spark Lend via the Graph Gateway. Adding a protocol is one subgraph id in `LENDING_SUBGRAPHS`; the note and UI do not change. One book can fail without aborting the other two. There is no mocked Graph fallback.
+
+**The Graph — AI use case, From Scratch.** First commit 8 Sep 2026, inside the event window; no project-specific prior code. The agent uses live Graph books as its only on-chain source. All three books failing aborts Check this creator. The agent then pays x402 for founder research and the risk note and uses that result to enable or block Pledge. Without `OPENAI_API_KEY` the note is a labeled heuristic over the same live inputs.
+
+**Privy — Best financial flow.** Privy is the only auth. Email or social login creates an embedded EVM wallet (`createOnLogin: "users-without-wallets"`). The app registers Hedera testnet as the sole chain, calls `switchChain(296)`, and `sendTransaction` HBAR to the campaign treasury. No browser extension, no seed phrase; the HashScan link is the receipt.
+
+**Partner feedback (short)**
+
+- Hedera: Blocky402 made a real pay-per-call agent path possible on testnet in days. ATS's published SDK is MetaMask-first; headless Node needed a documented connect order and KYC-on-then-deactivate so minting does not require Terminal3 VCs.
+- The Graph: Messari's shared lending schema is why three protocols are one query. Gateway keys fail closed, which is the right default for a judged demo.
+- Privy: Embedded wallets are the reason a judge can pledge HBAR on Hedera without installing MetaMask or handling a seed phrase.
 
 ---
 
@@ -193,7 +213,7 @@ Working demo surface:
 - Dashboard with campaign stats, How a backer funds, Integrations (Ready / Needs env), campaign cards, recent pledges
 - Campaign workspace: story, progress, Check this creator, Pledge, Hedera asset panel, recent pledges
 - Create campaign (`/campaigns/new`): asset class, goal, creator name / optional email / wallet, persisted
-- Operator desk (`/campaigns/[slug]/operate`): backer account, issue / transfer / freeze, 2-of-2 coupon
+- Operator desk (`/campaigns/[slug]/operate`): backer address, issue / mint / pause, 2-of-2 coupon
 - Command search (⌘K), theme toggle, Privy login in the shell
 - Two seed campaigns: **Harbor Credit** (invoice bond) and **Northwind Farms** (harvest share)
 
@@ -203,15 +223,16 @@ Working backend (file-persisted, not a database):
 |---|---|
 | `POST /api/agent` | Tool loop: Graph + founder search → pay x402 → HCS → summarize |
 | `POST /api/risk-report` | **x402-gated.** `writeRiskNote` over the agent's live Graph snapshot |
-| `POST /api/founder-search` | **Planned, x402-gated.** Tavily behind payment, priced per query |
+| `POST /api/founder-search/[queries]` | **x402-gated.** Tavily behind payment, priced per query (`/1` or `/2`) |
+| `POST /api/campaigns/[slug]/token` | set-backer / issue / mint / pause (ATS) |
 | `GET/POST /api/pledges` | Campaign book after an on-chain pledge; maps Privy `0x` → `0.0.x` via mirror |
 | `GET /api/campaigns`, `POST /api/campaigns` | Catalog + create |
 | `GET /api/campaigns/[slug]` | Campaign + approvals + operator/backer flags + suggested backer |
-| `POST /api/campaigns/[slug]/token` | set-backer / issue / transfer / freeze (HTS today, ATS if the spike lands) |
+| `POST /api/campaigns/[slug]/token` | set-backer / issue / mint / pause (ATS) |
 | `POST /api/campaigns/[slug]/payout` | approve-founder / approve-operator / release |
 | `GET /api/status` | Env truth for the Integrations row |
 
-Stack: Next.js 16, React 19, Privy, viem, `@hashgraph/sdk`, `@x402/{core,fetch,hedera,next}`, Tailwind 4. Planned: `@hashgraph/asset-tokenization-sdk`.
+Stack: Next.js 16, React 19, Privy, viem, ethers, `@hashgraph/sdk`, `@hashgraph/asset-tokenization-sdk`, `@x402/{core,fetch,hedera,next}`, Tailwind 4.
 
 ---
 
@@ -236,10 +257,10 @@ Privy wallet ──HBAR tx──► campaign treasury (EVM 296)
          └──POST /api/pledges──► .data/state.json + pledgedHbar
 
 Operator desk (`/campaigns/[slug]/operate`)
-         └──ATS Bond.create ──► diamond clone (factory 0.0.6797955)
+         └──ATS Bond.create ──► diamond clone (factory 0.0.9213391)
          └──Security.issue 1 unit ──► backer Privy EVM address
          └──pause / control list ──► compliance op
-         └──2-of-2 ──► Bond.setCoupon record + payCoupon (HBAR to backer)
+         └──2-of-2 ──► Coupon.setCoupon record + payCoupon (HBAR to backer)
 ```
 
 Seed campaign copy lives in `src/lib/campaigns.ts`. Created campaigns, pledges, token ids, HCS topic, x402 receiver, and payout approvals persist to `.data/state.json` via `src/lib/store.ts`.
@@ -276,13 +297,15 @@ The **campaign** is the free due-diligence layer. Paid founder research runs onl
 
 ## Demo script (one video, ≤4 minutes, satisfies Hedera ≤5 and Graph 2–4)
 
+Harbor Credit is already **paid** on testnet (README evidence table). Do not re-issue it on camera.
+
 1. Dashboard. Integrations row: Privy / Graph / Founder search / x402 / ATS all Ready (do not fake a badge).
-2. Open **Harbor Credit**. **Check this creator**. Say: "one Messari query, three protocols." Show three books, wallet positions, founder profile with sources, paid note. Click **both** HashScan payment txs and the HCS topic. Say: "the agent paid for the search and the note; the hashes are on HCS."
-3. **Log in with Privy** (email), pledge 10 ℏ. Show HashScan + **Your pledges**. Say: "no extension, no seed phrase."
-4. **Operator desk**: **Issue** (ATS bond, show contract on HashScan) → **Mint share** to the pledger's address → **Pause / control list**.
+2. Open **Harbor Credit**. **Check this creator**. Say: "one Messari query, three protocols." Show three books, wallet positions, founder profile with sources, paid note. Click **both** HashScan payment txs and the HCS topic. Say: "the agent paid for the search and the note; the hashes are on HCS." Optionally click the operator-desk HashScan links (issue / mint / pause / coupon) as already-settled proof.
+3. **Log in with Privy** (email), pledge 10 ℏ on **Northwind Farms**. Show HashScan + **Your pledges**. Say: "no extension, no seed phrase."
+4. **Northwind operator desk**: **Issue** (ATS bond, show contract on HashScan) → **Mint share** to the pledger's address → **Pause / control list**.
 5. **Approve as founder** (Privy) → **Co-sign as treasury** → **Release coupon**. Show the coupon record and the HBAR tx.
 
-If ATS is killed on Wednesday, step 4 becomes Issue token → Transfer share → Freeze / pause on HTS and the Tokenization track is dropped from the pitch.
+If ATS had been killed on Wednesday, step 4 would have stayed on HTS and the Tokenization track dropped from the pitch. The spike landed; we are on ATS.
 
 ---
 
@@ -295,7 +318,7 @@ If ATS is killed on Wednesday, step 4 becomes Issue token → Transfer share →
 | One share per campaign | Mint goes to the latest pledger, not every pledger |
 | ATS coupon is a record, HBAR payout is ours | ATS distribution is the Mass Payout service; we do not run it. The 1000-tinybar HBAR transfer is lifecycle proof, not yield. |
 | HTS path only: airdrop can land as *pending* | `TokenAirdropTransaction` succeeds even if the recipient has no free auto-association; freeze then fails. Rehearse once; ATS path avoids this. |
-| Seed totals are fixtures | Harbor Credit's 4,380 ℏ / 27 backers are hard-coded. Label them or zero them before recording. |
+| Seed totals are fixtures | Harbor Credit's 4,380 ℏ / 27 backers are hard-coded. Dashboard, cards, and campaign pages now label them as a seed book. |
 | Diligence can be skipped | Explicit "Pledge anyway"; call it out |
 | No tests | Judges run the deployed URL or `npm run dev` |
 | File store | Needs a writable disk. Pin `HEDERA_PAY_TO_ACCOUNT` and `HEDERA_HCS_TOPIC_ID` in the host env so a cold start does not create a new receiver account or topic. |
@@ -308,21 +331,21 @@ Deadline **Sun 13 Sep, 12:00 EDT / 20:00 GST**. Code freeze Friday night; Saturd
 
 ### Wed 9 Sep — decide and build
 
-- [ ] 09:00–13:00 **ATS spike** with the kill criterion above. Go / no-go at 13:00.
-- [ ] `/api/founder-search` behind x402, per-query price; agent pays two services; both tx ids in HCS message.
-- [ ] `NEXT_PUBLIC_CAMPAIGN_TREASURY`, `OPENAI_API_KEY`, `HEDERA_HCS_TOPIC_ID=0.0.10421775`, `HEDERA_PAY_TO_ACCOUNT=0.0.10421774` in `.env.local`.
-- [ ] Confirm three Graph subgraph IDs live.
+- [x] 09:00–13:00 **ATS spike** with the kill criterion above. **Go** (diamond `0.0.10423104`).
+- [x] `/api/founder-search` behind x402, per-query price; agent pays two services; both tx ids in HCS message.
+- [x] `NEXT_PUBLIC_CAMPAIGN_TREASURY`, `HEDERA_HCS_TOPIC_ID=0.0.10421775`, `HEDERA_PAY_TO_ACCOUNT=0.0.10421774` in `.env.local`. (`OPENAI_API_KEY` still optional.)
+- [x] Confirm three Graph subgraph IDs live.
 
 ### Thu 10 Sep — token layer and deploy
 
-- [ ] If go: `src/lib/ats.ts`, token/payout routes, token panel copy, `.env.example`. If no-go: label seed totals, handle pending airdrop (mirror check, fall back to pause).
+- [x] If go: `src/lib/ats.ts`, token/payout routes, token panel copy, `.env.example`. If no-go: label seed totals, handle pending airdrop (mirror check, fall back to pause).
 - [ ] Deploy to a host with a writable disk; copy env; smoke test Check → Pledge.
-- [ ] README: AI tools used; Privy UX paragraph; 402 `curl`; two-payment flow; HCS extra point; standards-leverage paragraph; From-scratch statement; ATS section (or HTS honesty section).
+- [x] README: AI tools used; Privy UX paragraph; 402 `curl`; two-payment flow; HCS extra point; standards-leverage paragraph; From-scratch statement; ATS section.
 
 ### Fri 11 Sep — rehearsal and freeze
 
 - [ ] Full run on the deployed URL from a fresh `state.json`: Check → Pledge → Issue → Mint/Transfer → Pause/Freeze → 2-of-2 → Coupon. Fix what breaks.
-- [ ] Draft the five track paragraphs and the partner feedback fields.
+- [x] Draft the five track paragraphs and the partner feedback fields.
 - [ ] Tag `v1.0.0`; code freeze.
 
 ### Sat 12 Sep — record and submit
@@ -398,12 +421,12 @@ See [README.md](./README.md) for env vars and the demo flow. Copy `.env.example`
 | Persisted book | `src/lib/store.ts` (`.data/state.json`) |
 | Messari lending queries | `src/lib/graph.ts` |
 | Agent tool loop | `src/lib/agent.ts`, `src/app/api/agent/route.ts` |
-| x402 client/server | `src/lib/x402.ts`, `src/app/api/risk-report/route.ts`, `src/app/api/founder-search/route.ts` (planned) |
+| x402 client/server | `src/lib/x402.ts`, `src/app/api/risk-report/route.ts`, `src/app/api/founder-search/[queries]/route.ts` |
 | Risk paragraph | `src/lib/risk-note.ts` |
 | Founder web search | `src/lib/founder-search.ts` |
 | HCS paid-note hash | `src/lib/hcs.ts` |
-| HTS issue/airdrop/freeze/coupon | `src/lib/hts.ts` (fallback path) |
-| ATS bond lifecycle | `src/lib/ats.ts` (planned) |
+| HBAR coupon / x402 receiver | `src/lib/hts.ts` |
+| ATS bond lifecycle | `src/lib/ats.ts` |
 | 2-of-2 flags | `src/lib/payouts.ts` → `src/lib/store.ts` |
 | Privy provider / pledge UI | `src/components/providers.tsx`, `src/components/pledge-panel.tsx` |
 | Token + coupon UI | `src/components/token-panel.tsx`, `src/app/campaigns/[slug]/operate/page.tsx` |

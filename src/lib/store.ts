@@ -18,6 +18,7 @@ export type CampaignRuntime = {
   transferTxId: string | null;
   freezeTxId: string | null;
   payoutTxId: string | null;
+  couponTxId: string | null;
   backerAccountId: string | null;
 };
 
@@ -38,6 +39,7 @@ const RUNTIME_KEYS = [
   "transferTxId",
   "freezeTxId",
   "payoutTxId",
+  "couponTxId",
   "backerAccountId",
 ] as const;
 
@@ -70,6 +72,7 @@ function runtimeFrom(seed: Campaign): CampaignRuntime {
     transferTxId: seed.transferTxId,
     freezeTxId: seed.freezeTxId,
     payoutTxId: seed.payoutTxId,
+    couponTxId: seed.couponTxId ?? null,
     backerAccountId: seed.backerAccountId,
   };
 }
@@ -222,6 +225,7 @@ export async function createCampaign(input: CreateCampaignInput) {
       transferTxId: null,
       freezeTxId: null,
       payoutTxId: null,
+      couponTxId: null,
       backerAccountId: null,
       treasuryEvm: treasury as `0x${string}`,
       imageHue: input.assetClass === "invoice-receivable" ? "32 42% 42%" : "152 28% 32%",

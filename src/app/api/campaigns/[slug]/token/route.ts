@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
+
+export const maxDuration = 60;
 import { loadCampaign, patchCampaign } from "@/lib/store";
-import { isHederaAccountId } from "@/lib/hedera";
+import { getBackerAccountId } from "@/lib/hts";
 import {
-  freezeCampaignHolder,
-  getBackerAccountId,
-  issueCampaignToken,
-  pauseCampaignToken,
-  transferCampaignToken,
-} from "@/lib/hts";
+  controlListBacker,
+  isBackerId,
+  issueBond,
+  mintToBacker,
+  pauseBond,
+} from "@/lib/ats";
 
 export async function POST(
   request: NextRequest,
@@ -25,14 +27,14 @@ export async function POST(
     if (body.action === "set-backer") {
       if (campaign.tokenLifecycle !== "draft" && campaign.tokenLifecycle !== "issued") {
         return NextResponse.json(
-          { error: "Backer account can only be set before the share is transferred." },
+          { error: "Backer can only be set before the share is minted." },
           { status: 400 },
         );
       }
       const accountId = body.accountId?.trim() ?? "";
-      if (!isHederaAccountId(accountId)) {
+      if (!isBackerId(accountId)) {
         return NextResponse.json(
-          { error: "Backer account must look like 0.0.12345." },
+          { error: "Backer must be a Privy 0x address or a Hedera account like 0.0.12345." },
           { status: 400 },
         );
       }
@@ -42,14 +44,9 @@ export async function POST(
 
     if (body.action === "issue") {
       if (campaign.tokenId) {
-        return NextResponse.json({ error: "Token already issued" }, { status: 400 });
+        return NextResponse.json({ error: "Bond already issued" }, { status: 400 });
       }
-      const issued = await issueCampaignToken({
-        name: campaign.tokenName,
-        symbol: campaign.tokenSymbol,
-        memo: `Zikibols ${campaign.assetClass} ${campaign.slug}`,
-        supply: 1000,
-      });
+      const issued = await issueBond(campaign);
       const updated = await patchCampaign(slug, {
         tokenId: issued.tokenId,
         tokenLifecycle: "issued",
@@ -60,19 +57,22 @@ export async function POST(
 
     if (body.action === "transfer") {
       if (campaign.tokenLifecycle !== "issued") {
-        return NextResponse.json({ error: "Issue the token first" }, { status: 400 });
+        return NextResponse.json({ error: "Issue the ATS bond first" }, { status: 400 });
       }
       const recipient = campaign.backerAccountId || getBackerAccountId();
       if (!recipient) {
         return NextResponse.json(
-          { error: "Set a backer Hedera account on this desk (or HEDERA_BACKER_ACCOUNT_ID) to airdrop one share." },
+          {
+            error:
+              "Set a backer Privy address (or Hedera 0.0.x / HEDERA_BACKER_ACCOUNT_ID) to mint one share.",
+          },
           { status: 400 },
         );
       }
       if (!campaign.tokenId) {
-        return NextResponse.json({ error: "Issue the token first" }, { status: 400 });
+        return NextResponse.json({ error: "Issue the ATS bond first" }, { status: 400 });
       }
-      const transferred = await transferCampaignToken(campaign.tokenId, recipient);
+      const transferred = await mintToBacker(campaign.tokenId, recipient);
       const updated = await patchCampaign(slug, {
         tokenLifecycle: "transferred",
         transferTxId: transferred.transactionId,
@@ -88,33 +88,33 @@ export async function POST(
         (campaign.tokenLifecycle === "issued" && !holder);
       if (!canFreeze) {
         return NextResponse.json(
-          { error: "Airdrop a share first, or pause immediately after issue if there is no backer." },
+          { error: "Mint a share first, or pause immediately after issue if there is no backer." },
           { status: 400 },
         );
       }
       if (!campaign.tokenId) {
-        return NextResponse.json({ error: "Issue the token first" }, { status: 400 });
+        return NextResponse.json({ error: "Issue the ATS bond first" }, { status: 400 });
       }
       if (holder) {
-        const frozen = await freezeCampaignHolder(campaign.tokenId, holder);
-        const updated = await patchCampaign(slug, {
-          tokenLifecycle: "frozen",
-          freezeTxId: frozen.transactionId,
-          backerAccountId: holder,
-        });
-        return NextResponse.json({ campaign: updated, ...frozen, mode: "account-freeze" });
+        try {
+          await controlListBacker(campaign.tokenId, holder);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "";
+          if (!/already in the control list/i.test(message)) throw error;
+        }
       }
-      const paused = await pauseCampaignToken(campaign.tokenId);
+      const paused = await pauseBond(campaign.tokenId);
       const updated = await patchCampaign(slug, {
         tokenLifecycle: "frozen",
         freezeTxId: paused.transactionId,
+        backerAccountId: holder || campaign.backerAccountId,
       });
       return NextResponse.json({ campaign: updated, ...paused, mode: "pause" });
     }
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Hedera token action failed";
+    const message = error instanceof Error ? error.message : "ATS token action failed";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
