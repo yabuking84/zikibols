@@ -77,10 +77,17 @@ export async function buyRiskReport(origin: string, body: unknown) {
     { network: HEDERA_TESTNET_CAIP2 },
   );
 
-  const client = new x402Client().register(
-    "hedera:*",
-    new ExactHederaClientScheme(signer),
-  );
+  const client = new x402Client()
+    .register("hedera:*", new ExactHederaClientScheme(signer))
+    .setSpendControls({
+      allowedAssets: [
+        {
+          network: HEDERA_TESTNET_CAIP2,
+          asset: HBAR_ASSET_ID,
+          maxAmountPerPayment: process.env.X402_PRICE_TINYBARS ?? X402_PRICE_TINYBARS,
+        },
+      ],
+    });
 
   const fetchWithPay = wrapFetchWithPayment(fetch, client);
   const response = await fetchWithPay(`${origin}${RISK_REPORT_PATH}`, {
