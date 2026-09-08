@@ -34,6 +34,12 @@ yarn-error.log*
 .env*
 !.env.example
 
+# local campaign book (pledges, HTS ids, 2-of-2 approvals)
+.data/
+
+# local Node.js runtime (not committed)
+.tools/
+
 # vercel
 .vercel
 

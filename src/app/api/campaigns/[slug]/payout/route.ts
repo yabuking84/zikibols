@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCampaign, patchCampaign } from "@/lib/campaigns";
+import { loadCampaign, patchCampaign } from "@/lib/store";
 import {
   approveFounder,
   approveOperator,
@@ -13,7 +13,7 @@ export async function POST(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
-  const campaign = getCampaign(slug);
+  const campaign = await loadCampaign(slug);
   if (!campaign) {
     return NextResponse.json({ error: "Unknown campaign" }, { status: 404 });
   }
@@ -25,16 +25,18 @@ export async function POST(
       if (!body.wallet) {
         return NextResponse.json({ error: "wallet is required" }, { status: 400 });
       }
+      const approvals = await approveFounder(slug, body.wallet);
       return NextResponse.json({
-        approvals: approveFounder(slug, body.wallet),
-        payoutReady: payoutReady(slug),
+        approvals,
+        payoutReady: await payoutReady(slug),
       });
     }
 
     if (body.action === "approve-operator") {
+      const approvals = await approveOperator(slug);
       return NextResponse.json({
-        approvals: approveOperator(slug),
-        payoutReady: payoutReady(slug),
+        approvals,
+        payoutReady: await payoutReady(slug),
       });
     }
 
@@ -45,17 +47,11 @@ export async function POST(
           { status: 400 },
         );
       }
-      if (campaign.tokenLifecycle !== "frozen") {
-        return NextResponse.json(
-          { error: "Freeze or pause the token before releasing the coupon." },
-          { status: 400 },
-        );
-      }
-      if (!payoutReady(slug)) {
+      if (!(await payoutReady(slug))) {
         return NextResponse.json(
           {
             error: "Need two approvals: Privy founder + treasury operator.",
-            approvals: getPayoutApprovals(slug),
+            approvals: await getPayoutApprovals(slug),
           },
           { status: 403 },
         );
@@ -72,7 +68,7 @@ export async function POST(
         );
       }
       const paid = await payCoupon(recipient);
-      const updated = patchCampaign(slug, {
+      const updated = await patchCampaign(slug, {
         tokenLifecycle: "paid",
         payoutTxId: paid.transactionId,
       });

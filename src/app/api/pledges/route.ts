@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { addPledge, listPledges } from "@/lib/pledges";
-import { getCampaign } from "@/lib/campaigns";
+import { loadCampaign } from "@/lib/store";
 
 export async function GET(request: NextRequest) {
   const slug = request.nextUrl.searchParams.get("campaign");
-  return NextResponse.json({ pledges: listPledges(slug ?? undefined) });
+  return NextResponse.json({ pledges: await listPledges(slug ?? undefined) });
 }
 
 export async function POST(request: NextRequest) {
@@ -22,11 +22,11 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (!getCampaign(body.campaignSlug)) {
+  if (!(await loadCampaign(body.campaignSlug))) {
     return NextResponse.json({ error: "Unknown campaign" }, { status: 404 });
   }
 
-  const pledge = addPledge({
+  const pledge = await addPledge({
     campaignSlug: body.campaignSlug,
     wallet: body.wallet,
     amountHbar: body.amountHbar,

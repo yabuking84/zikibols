@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import type { Pledge } from "@/lib/types";
-import { campaigns } from "@/lib/campaigns";
+import { useCatalog } from "@/components/use-catalog";
 import { hbar, shortAddress } from "@/lib/money";
 import { hashscanTxUrl } from "@/lib/hedera";
 
@@ -15,6 +15,7 @@ export function RecentPledges({
   refreshKey?: number;
 }) {
   const [pledges, setPledges] = useState<Pledge[]>([]);
+  const campaigns = useCatalog();
 
   const load = useCallback(async () => {
     const query = campaignSlug ? `?campaign=${campaignSlug}` : "";

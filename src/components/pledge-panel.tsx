@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import {
   createWalletClient,
@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Campaign } from "@/lib/campaigns";
+import type { Pledge } from "@/lib/types";
+import { hbar, shortAddress } from "@/lib/money";
 import { hederaTestnet, hashscanTxUrl } from "@/lib/hedera";
 
 const PRESETS = [10, 50, 100];
@@ -19,11 +21,13 @@ const PRESETS = [10, 50, 100];
 export function PledgePanel({
   campaign,
   diligenceDone = true,
+  refreshKey = 0,
   onSkip,
   onPledged,
 }: {
   campaign: Campaign;
   diligenceDone?: boolean;
+  refreshKey?: number;
   onSkip?: () => void;
   onPledged?: () => void;
 }) {
@@ -43,6 +47,7 @@ export function PledgePanel({
     <PledgeForm
       campaign={campaign}
       diligenceDone={diligenceDone}
+      refreshKey={refreshKey}
       onSkip={onSkip}
       onPledged={onPledged}
     />
@@ -52,11 +57,13 @@ export function PledgePanel({
 function PledgeForm({
   campaign,
   diligenceDone,
+  refreshKey,
   onSkip,
   onPledged,
 }: {
   campaign: Campaign;
   diligenceDone: boolean;
+  refreshKey: number;
   onSkip?: () => void;
   onPledged?: () => void;
 }) {
@@ -66,6 +73,7 @@ function PledgeForm({
   const [status, setStatus] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [mine, setMine] = useState<Pledge[]>([]);
 
   const wallet = wallets[0];
   const treasury = useMemo(
@@ -74,6 +82,25 @@ function PledgeForm({
       campaign.treasuryEvm,
     [campaign.treasuryEvm],
   );
+  const mineTotal = mine.reduce((sum, pledge) => sum + pledge.amountHbar, 0);
+
+  useEffect(() => {
+    if (!wallet?.address) {
+      setMine([]);
+      return;
+    }
+    const address = wallet.address.toLowerCase();
+    fetch(`/api/pledges?campaign=${campaign.slug}`)
+      .then((response) => response.json())
+      .then((json: { pledges?: Pledge[] }) => {
+        setMine(
+          (json.pledges ?? []).filter(
+            (pledge) => pledge.wallet.toLowerCase() === address,
+          ),
+        );
+      })
+      .catch(() => setMine([]));
+  }, [campaign.slug, wallet?.address, refreshKey]);
 
   async function pledge() {
     if (!privy.authenticated) {
@@ -190,6 +217,14 @@ function PledgeForm({
         >
           View pledge on HashScan
         </a>
+      ) : null}
+      {mine.length > 0 ? (
+        <div className="border-t border-border pt-3 text-sm">
+          <p className="font-medium">Your pledges</p>
+          <p className="text-muted-foreground">
+            {mine.length} from {shortAddress(wallet?.address ?? "")} · {hbar(mineTotal)}
+          </p>
+        </div>
       ) : null}
     </div>
   );

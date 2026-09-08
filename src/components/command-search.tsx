@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
-import { campaigns } from "@/lib/campaigns";
+import { useCatalog } from "@/components/use-catalog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "cn";
@@ -13,6 +13,7 @@ export function CommandSearch() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const campaigns = useCatalog();
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -30,11 +31,19 @@ export function CommandSearch() {
     const needle = query.trim().toLowerCase();
     const pages = [
       { href: "/", title: "Dashboard", hint: "Overview and live campaigns" },
-      ...campaigns.map((campaign) => ({
-        href: `/campaigns/${campaign.slug}`,
-        title: campaign.title,
-        hint: `${campaign.tokenSymbol} · ${campaign.location}`,
-      })),
+      { href: "/campaigns/new", title: "Start a campaign", hint: "Tokenize an invoice or harvest share" },
+      ...campaigns.flatMap((campaign) => [
+        {
+          href: `/campaigns/${campaign.slug}`,
+          title: campaign.title,
+          hint: `${campaign.tokenSymbol} · ${campaign.location}`,
+        },
+        {
+          href: `/campaigns/${campaign.slug}/operate`,
+          title: `${campaign.tokenSymbol} operator desk`,
+          hint: `Issue, freeze, coupon · ${campaign.title}`,
+        },
+      ]),
     ];
     if (!needle) return pages;
     return pages.filter(
@@ -42,7 +51,7 @@ export function CommandSearch() {
         page.title.toLowerCase().includes(needle) ||
         page.hint.toLowerCase().includes(needle),
     );
-  }, [query]);
+  }, [campaigns, query]);
 
   function go(href: string) {
     setOpen(false);

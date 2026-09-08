@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { getIntegrationStatus } from "@/lib/status";
 import { listPledges } from "@/lib/pledges";
-import { campaigns } from "@/lib/campaigns";
+import { loadCampaigns } from "@/lib/store";
 
 export async function GET() {
+  const campaigns = await loadCampaigns();
   return NextResponse.json({
     integrations: getIntegrationStatus(),
-    pledges: listPledges(),
+    pledges: await listPledges(),
     campaigns: campaigns.map((campaign) => ({
       slug: campaign.slug,
       title: campaign.title,

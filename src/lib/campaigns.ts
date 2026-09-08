@@ -90,6 +90,7 @@ export const campaigns: Campaign[] = [
   },
 ];
 
+/** Seed catalog lookup. Live pledged totals and token ids live in `src/lib/store.ts`. */
 export function getCampaign(slug: string) {
   return campaigns.find((campaign) => campaign.slug === slug);
 }
@@ -104,9 +105,34 @@ export function assetClassLabel(assetClass: AssetClass) {
     : "Harvest revenue share";
 }
 
-export function patchCampaign(slug: string, patch: Partial<Campaign>) {
-  const campaign = getCampaign(slug);
-  if (!campaign) return null;
-  Object.assign(campaign, patch);
-  return campaign;
+export type CatalogItem = {
+  slug: string;
+  title: string;
+  tokenSymbol: string;
+  location: string;
+};
+
+export function toCatalogItem(campaign: Pick<Campaign, "slug" | "title" | "tokenSymbol" | "location">): CatalogItem {
+  return {
+    slug: campaign.slug,
+    title: campaign.title,
+    tokenSymbol: campaign.tokenSymbol,
+    location: campaign.location,
+  };
 }
+
+export const RESERVED_SLUGS = new Set(["new"]);
+
+export function slugifyCampaign(title: string) {
+  const slug = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48);
+  return slug || "campaign";
+}
+
+export function isEvmAddress(value: string): value is `0x${string}` {
+  return /^0x[a-fA-F0-9]{40}$/.test(value);
+}
+

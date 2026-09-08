@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import {
   assetClassLabel,
   fundedPercent,
@@ -11,9 +12,9 @@ import { hbar } from "@/lib/money";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { buttonVariants } from "@/components/ui/button";
 import { CheckCreator } from "@/components/check-creator";
 import { PledgePanel } from "@/components/pledge-panel";
-import { TokenPanel } from "@/components/token-panel";
 import { RecentPledges } from "@/components/recent-pledges";
 import { cn } from "cn";
 
@@ -35,6 +36,7 @@ export function CampaignWorkspace({ campaign: initial }: { campaign: Campaign })
 
   const funded = fundedPercent(campaign);
   const canPledge = Boolean(diligence) || skippedCheck;
+  const tokenized = campaign.tokenLifecycle !== "draft";
 
   return (
     <main className="mx-auto grid w-full max-w-6xl gap-6 lg:grid-cols-[1.2fr_0.8fr]">
@@ -43,7 +45,7 @@ export function CampaignWorkspace({ campaign: initial }: { campaign: Campaign })
           {[
             { n: "1", label: "Diligence", on: Boolean(diligence) },
             { n: "2", label: "Pledge", on: canPledge },
-            { n: "3", label: "Tokenize", on: campaign.tokenLifecycle !== "draft" },
+            { n: "3", label: "Tokenize", on: tokenized },
           ].map((step) => (
             <li
               key={step.label}
@@ -93,7 +95,21 @@ export function CampaignWorkspace({ campaign: initial }: { campaign: Campaign })
           <RecentPledges campaignSlug={campaign.slug} refreshKey={pledgeTick} />
         </section>
         <section className="rounded-xl border bg-card p-5">
-          <TokenPanel slug={campaign.slug} />
+          <h2 className="text-base font-medium">Hedera asset</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {campaign.tokenName} ({campaign.tokenSymbol}) is issued from the operator
+            desk: freezeable HTS share, then a coupon after 2-of-2 sign-off.
+          </p>
+          <p className="mt-2 text-xs font-medium">
+            Status: {campaign.tokenLifecycle}
+            {campaign.tokenId ? ` · ${campaign.tokenId}` : ""}
+          </p>
+          <Link
+            href={`/campaigns/${campaign.slug}/operate`}
+            className={`${buttonVariants({ size: "sm" })} mt-4 w-fit`}
+          >
+            Open operator desk
+          </Link>
         </section>
       </article>
       <aside className="space-y-6 self-start rounded-xl border bg-card p-5 lg:sticky lg:top-16">
@@ -106,6 +122,7 @@ export function CampaignWorkspace({ campaign: initial }: { campaign: Campaign })
         <PledgePanel
           campaign={campaign}
           diligenceDone={canPledge}
+          refreshKey={pledgeTick}
           onSkip={() => setSkippedCheck(true)}
           onPledged={() => {
             setPledgeTick((value) => value + 1);

@@ -9,6 +9,11 @@ export type Pledge = {
   createdAt: string;
 };
 
+export type PayoutApprovals = {
+  founderWallet: string | null;
+  operator: boolean;
+};
+
 export type AgentStep = {
   tool: "queryLending" | "buyRiskReport";
   detail: string;

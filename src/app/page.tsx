@@ -1,4 +1,5 @@
 import { connection } from "next/server";
+import Link from "next/link";
 import { Command, Landmark, Shield, Wallet } from "lucide-react";
 import { CampaignCard } from "@/components/campaign-card";
 import { IntegrationStatus } from "@/components/integration-status";
@@ -11,7 +12,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { campaigns } from "@/lib/campaigns";
+import { buttonVariants } from "@/components/ui/button";
+import { loadCampaigns } from "@/lib/store";
 import { hbar } from "@/lib/money";
 
 const steps = [
@@ -25,12 +27,13 @@ const steps = [
   },
   {
     title: "Tokenize and pay out",
-    body: "Issue an HTS bond/share, airdrop, freeze, then release a coupon after a 2-of-2 founder + operator sign-off.",
+    body: "On the operator desk, issue an HTS bond/share, airdrop, freeze, then release a coupon after a 2-of-2 founder + operator sign-off.",
   },
 ];
 
 export default async function Home() {
   await connection();
+  const campaigns = await loadCampaigns();
   const pledged = campaigns.reduce((sum, campaign) => sum + campaign.pledgedHbar, 0);
   const backers = campaigns.reduce((sum, campaign) => sum + campaign.backers, 0);
   const stats = [
@@ -107,7 +110,15 @@ export default async function Home() {
         <IntegrationStatus />
       </section>
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold tracking-tight">Campaigns</h2>
+        <div className="flex items-end justify-between gap-3">
+          <h2 className="text-lg font-semibold tracking-tight">Campaigns</h2>
+          <Link
+            href="/campaigns/new"
+            className={`${buttonVariants({ variant: "outline", size: "sm" })} w-fit`}
+          >
+            Start a campaign
+          </Link>
+        </div>
         <div className="grid gap-4 md:grid-cols-2">
           {campaigns.map((campaign) => (
             <CampaignCard key={campaign.slug} campaign={campaign} />

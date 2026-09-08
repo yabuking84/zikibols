@@ -1,11 +1,7 @@
 import { connection } from "next/server";
 import { notFound } from "next/navigation";
-import { campaigns, getCampaign } from "@/lib/campaigns";
+import { loadCampaign } from "@/lib/store";
 import { CampaignWorkspace } from "@/components/campaign-workspace";
-
-export function generateStaticParams() {
-  return campaigns.map((campaign) => ({ slug: campaign.slug }));
-}
 
 export default async function CampaignPage({
   params,
@@ -14,7 +10,7 @@ export default async function CampaignPage({
 }) {
   await connection();
   const { slug } = await params;
-  const campaign = getCampaign(slug);
+  const campaign = await loadCampaign(slug);
   if (!campaign) notFound();
 
   return <CampaignWorkspace campaign={campaign} />;

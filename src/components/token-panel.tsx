@@ -4,8 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import type { Campaign, TokenLifecycle } from "@/lib/campaigns";
-import { hashscanTokenUrl, hashscanTxUrl } from "@/lib/hedera";
+import { hashscanAccountUrl, hashscanTokenUrl, hashscanTxUrl } from "@/lib/hedera";
 import { shortAddress } from "@/lib/money";
 
 type Snapshot = {
@@ -42,12 +44,14 @@ export function TokenPanel({ slug }: { slug: string }) {
   const [data, setData] = useState<Snapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [backerDraft, setBackerDraft] = useState("");
 
   const refresh = useCallback(async () => {
     const response = await fetch(`/api/campaigns/${slug}`);
     const json = (await response.json()) as Snapshot & { error?: string };
     if (!response.ok) throw new Error(json.error ?? "Failed to load campaign");
     setData(json);
+    if (json.backerAccountId) setBackerDraft(json.backerAccountId);
   }, [slug]);
 
   useEffect(() => {
@@ -93,7 +97,7 @@ export function TokenPanel({ slug }: { slug: string }) {
       : lifecycle === "issued" && backerAccountId
         ? "Next: airdrop one share to the backer account."
         : lifecycle === "issued"
-          ? "Next: pause the token, or set HEDERA_BACKER_ACCOUNT_ID to airdrop first."
+          ? "Next: pause the token, or save a backer account (0.0.x) to airdrop first."
           : lifecycle === "transferred"
             ? "Next: freeze that holder so the share cannot trade."
             : lifecycle === "frozen"
@@ -124,6 +128,50 @@ export function TokenPanel({ slug }: { slug: string }) {
       ) : (
         <p className="font-mono text-xs text-muted-foreground">No token id yet</p>
       )}
+      <div className="space-y-1.5">
+        <Label htmlFor="backer-account">Backer Hedera account</Label>
+        <div className="flex flex-wrap gap-2">
+          <Input
+            id="backer-account"
+            value={backerDraft}
+            onChange={(event) => setBackerDraft(event.target.value)}
+            placeholder="0.0.12345"
+            className="min-w-48 flex-1 font-mono"
+            disabled={lifecycle !== "draft" && lifecycle !== "issued"}
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={
+              Boolean(busy) ||
+              (lifecycle !== "draft" && lifecycle !== "issued")
+            }
+            onClick={() =>
+              post(`/api/campaigns/${slug}/token`, {
+                action: "set-backer",
+                accountId: backerDraft,
+              })
+            }
+          >
+            {busy === "set-backer" ? "Saving…" : "Save backer"}
+          </Button>
+        </div>
+        {backerAccountId ? (
+          <a
+            className="inline-block font-mono text-xs text-primary underline-offset-4 hover:underline"
+            href={hashscanAccountUrl(backerAccountId)}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {backerAccountId} on HashScan
+          </a>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Airdrop one share here, then freeze that holder. Env
+            HEDERA_BACKER_ACCOUNT_ID still works as a fallback.
+          </p>
+        )}
+      </div>
       <div className="flex flex-wrap gap-2">
         <Button
           size="sm"
@@ -157,8 +205,8 @@ export function TokenPanel({ slug }: { slug: string }) {
       ) : null}
       {!backerAccountId ? (
         <p className="text-xs text-muted-foreground">
-          Set HEDERA_BACKER_ACCOUNT_ID to airdrop one share, then freeze that account.
-          Without it, Freeze pauses the whole token instead.
+          Without a backer account, Freeze pauses the whole token instead of freezing
+          one holder.
         </p>
       ) : null}
       <div className="space-y-1">

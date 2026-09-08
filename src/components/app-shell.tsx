@@ -8,15 +8,17 @@ import {
   Landmark,
   LayoutDashboard,
   Menu,
+  Plus,
   Shield,
   Wallet,
+  Wrench,
 } from "lucide-react";
 import { CommandSearch } from "@/components/command-search";
+import { useCatalog } from "@/components/use-catalog";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { campaigns } from "@/lib/campaigns";
 import { shortAddress } from "@/lib/money";
 import { cn } from "cn";
 
@@ -56,6 +58,7 @@ function NavLink({
 
 function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const campaigns = useCatalog();
 
   return (
     <div className="flex h-full flex-col">
@@ -65,7 +68,7 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
         </div>
         <div className="leading-tight">
           <p className="text-sm font-semibold">zikibols</p>
-          <p className="text-xs text-muted-foreground">Admin</p>
+          <p className="text-xs text-muted-foreground">Backers & desk</p>
         </div>
       </div>
       <nav className="flex-1 space-y-6 overflow-y-auto px-2 py-2">
@@ -93,6 +96,28 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
               label={campaign.tokenSymbol}
               icon={Landmark}
               active={pathname === `/campaigns/${campaign.slug}`}
+              onClick={onNavigate}
+            />
+          ))}
+          <NavLink
+            href="/campaigns/new"
+            label="Start a campaign"
+            icon={Plus}
+            active={pathname === "/campaigns/new"}
+            onClick={onNavigate}
+          />
+        </div>
+        <div className="space-y-1">
+          <p className="px-2 pb-1 text-xs font-medium text-muted-foreground">
+            Operator desk
+          </p>
+          {campaigns.map((campaign) => (
+            <NavLink
+              key={`${campaign.slug}-operate`}
+              href={`/campaigns/${campaign.slug}/operate`}
+              label={campaign.tokenSymbol}
+              icon={Wrench}
+              active={pathname === `/campaigns/${campaign.slug}/operate`}
               onClick={onNavigate}
             />
           ))}
@@ -176,9 +201,14 @@ function HeaderAuth() {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const campaigns = useCatalog();
+  const creating = pathname === "/campaigns/new";
   const campaign = campaigns.find(
-    (item) => pathname === `/campaigns/${item.slug}`,
+    (item) =>
+      pathname === `/campaigns/${item.slug}` ||
+      pathname === `/campaigns/${item.slug}/operate`,
   );
+  const operating = Boolean(campaign && pathname.endsWith("/operate"));
 
   return (
     <div className="flex min-h-svh w-full" data-variant="inset">
@@ -220,17 +250,38 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 href="/"
                 className={cn(
                   "truncate font-medium",
-                  campaign
+                  campaign || creating
                     ? "text-muted-foreground hover:text-foreground"
                     : "text-foreground",
                 )}
               >
                 Dashboard
               </Link>
+              {creating ? (
+                <>
+                  <span className="text-muted-foreground">/</span>
+                  <span className="truncate font-medium">New campaign</span>
+                </>
+              ) : null}
               {campaign ? (
                 <>
                   <span className="text-muted-foreground">/</span>
-                  <span className="truncate font-medium">{campaign.title}</span>
+                  {operating ? (
+                    <Link
+                      href={`/campaigns/${campaign.slug}`}
+                      className="truncate font-medium text-muted-foreground hover:text-foreground"
+                    >
+                      {campaign.title}
+                    </Link>
+                  ) : (
+                    <span className="truncate font-medium">{campaign.title}</span>
+                  )}
+                </>
+              ) : null}
+              {operating ? (
+                <>
+                  <span className="text-muted-foreground">/</span>
+                  <span className="truncate font-medium">Operator</span>
                 </>
               ) : null}
             </nav>

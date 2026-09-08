@@ -28,3 +28,7 @@ export function hashscanTokenUrl(tokenId: string) {
 export function hashscanTxUrl(txId: string) {
   return `https://hashscan.io/testnet/transaction/${encodeURIComponent(txId)}`;
 }
+
+export function isHederaAccountId(value: string) {
+  return /^\d+\.\d+\.\d+$/.test(value.trim());
+}

@@ -1,0 +1,256 @@
+/** Server-only campaign book. Do not import from Client Components. */
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import path from "node:path";
+import {
+  campaigns as seedCampaigns,
+  RESERVED_SLUGS,
+  slugifyCampaign,
+  type AssetClass,
+  type Campaign,
+  type TokenLifecycle,
+} from "@/lib/campaigns";
+import type { PayoutApprovals, Pledge } from "@/lib/types";
+
+export type CampaignRuntime = {
+  tokenId: string | null;
+  tokenLifecycle: TokenLifecycle;
+  issueTxId: string | null;
+  transferTxId: string | null;
+  freezeTxId: string | null;
+  payoutTxId: string | null;
+  backerAccountId: string | null;
+};
+
+type StoredState = {
+  version: 1;
+  runtime: Record<string, CampaignRuntime>;
+  created: Campaign[];
+  pledges: Pledge[];
+  approvals: Record<string, PayoutApprovals>;
+};
+
+const RUNTIME_KEYS = [
+  "tokenId",
+  "tokenLifecycle",
+  "issueTxId",
+  "transferTxId",
+  "freezeTxId",
+  "payoutTxId",
+  "backerAccountId",
+] as const;
+
+const emptyApprovals: PayoutApprovals = { founderWallet: null, operator: false };
+
+let cache: StoredState | null = null;
+let writeTail: Promise<void> = Promise.resolve();
+
+function dataFile() {
+  return (
+    process.env.ZIKIBOLS_DATA_PATH ??
+    path.join(process.cwd(), ".data", "state.json")
+  );
+}
+
+function emptyState(): StoredState {
+  return { version: 1, runtime: {}, created: [], pledges: [], approvals: {} };
+}
+
+function catalog(state: StoredState) {
+  return [...seedCampaigns, ...state.created];
+}
+
+function runtimeFrom(seed: Campaign): CampaignRuntime {
+  return {
+    tokenId: seed.tokenId,
+    tokenLifecycle: seed.tokenLifecycle,
+    issueTxId: seed.issueTxId,
+    transferTxId: seed.transferTxId,
+    freezeTxId: seed.freezeTxId,
+    payoutTxId: seed.payoutTxId,
+    backerAccountId: seed.backerAccountId,
+  };
+}
+
+function hydrate(seed: Campaign, state: StoredState): Campaign {
+  const runtime = state.runtime[seed.slug];
+  const mine = state.pledges.filter((pledge) => pledge.campaignSlug === seed.slug);
+  return {
+    ...seed,
+    ...runtime,
+    pledgedHbar: seed.pledgedHbar + mine.reduce((sum, pledge) => sum + pledge.amountHbar, 0),
+    backers: seed.backers + mine.length,
+  };
+}
+
+async function load(): Promise<StoredState> {
+  if (cache) return cache;
+  try {
+    const raw = await readFile(dataFile(), "utf8");
+    const parsed = JSON.parse(raw) as Partial<StoredState>;
+    cache = {
+      version: 1,
+      runtime: parsed.runtime ?? {},
+      created: Array.isArray(parsed.created) ? parsed.created : [],
+      pledges: Array.isArray(parsed.pledges) ? parsed.pledges : [],
+      approvals: parsed.approvals ?? {},
+    };
+  } catch {
+    cache = emptyState();
+  }
+  return cache;
+}
+
+async function persist(state: StoredState) {
+  cache = state;
+  try {
+    const file = dataFile();
+    await mkdir(path.dirname(file), { recursive: true });
+    const tmp = `${file}.${process.pid}.tmp`;
+    await writeFile(tmp, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+    await rename(tmp, file);
+  } catch {
+    // Serverless / read-only disks still keep the in-memory book for this process.
+  }
+}
+
+async function withState<T>(mutator: (state: StoredState) => T): Promise<T> {
+  const run = async () => {
+    const state = await load();
+    const result = mutator(state);
+    await persist(state);
+    return result;
+  };
+  const next = writeTail.then(run, run);
+  writeTail = next.then(
+    () => undefined,
+    () => undefined,
+  );
+  return next;
+}
+
+export async function loadCampaigns(): Promise<Campaign[]> {
+  const state = await load();
+  return catalog(state).map((campaign) => hydrate(campaign, state));
+}
+
+export async function loadCampaign(slug: string): Promise<Campaign | null> {
+  const state = await load();
+  const seed = catalog(state).find((campaign) => campaign.slug === slug);
+  if (!seed) return null;
+  return hydrate(seed, state);
+}
+
+export async function patchCampaign(slug: string, patch: Partial<Campaign>) {
+  return withState((state) => {
+    const seed = catalog(state).find((campaign) => campaign.slug === slug);
+    if (!seed) return null;
+    const current = state.runtime[slug] ?? runtimeFrom(seed);
+    const next = { ...current };
+    for (const key of RUNTIME_KEYS) {
+      if (patch[key] !== undefined) {
+        next[key] = patch[key] as never;
+      }
+    }
+    state.runtime[slug] = next;
+    return hydrate(seed, state);
+  });
+}
+
+export type CreateCampaignInput = {
+  title: string;
+  blurb: string;
+  story: string;
+  creatorName: string;
+  creatorWallet: `0x${string}`;
+  goalHbar: number;
+  daysLeft: number;
+  location: string;
+  assetClass: AssetClass;
+  tokenName: string;
+  tokenSymbol: string;
+};
+
+export async function createCampaign(input: CreateCampaignInput) {
+  return withState((state) => {
+    const taken = new Set([
+      ...RESERVED_SLUGS,
+      ...catalog(state).map((campaign) => campaign.slug),
+    ]);
+    let slug = slugifyCampaign(input.title);
+    if (taken.has(slug)) {
+      let n = 2;
+      while (taken.has(`${slug}-${n}`)) n += 1;
+      slug = `${slug}-${n}`;
+    }
+
+    const treasury =
+      (process.env.NEXT_PUBLIC_CAMPAIGN_TREASURY as `0x${string}` | undefined) ??
+      seedCampaigns[0]?.treasuryEvm ??
+      "0x0000000000000000000000000000000002e1a9a0";
+
+    const campaign: Campaign = {
+      ...input,
+      slug,
+      pledgedHbar: 0,
+      backers: 0,
+      tokenId: null,
+      tokenLifecycle: "draft",
+      issueTxId: null,
+      transferTxId: null,
+      freezeTxId: null,
+      payoutTxId: null,
+      backerAccountId: null,
+      treasuryEvm: treasury,
+      imageHue: input.assetClass === "invoice-receivable" ? "32 42% 42%" : "152 28% 32%",
+    };
+    state.created.push(campaign);
+    return campaign;
+  });
+}
+
+export async function listPledges(campaignSlug?: string) {
+  const state = await load();
+  return campaignSlug
+    ? state.pledges.filter((pledge) => pledge.campaignSlug === campaignSlug)
+    : state.pledges;
+}
+
+export async function addPledge(input: Omit<Pledge, "id" | "createdAt">) {
+  return withState((state) => {
+    const pledge: Pledge = {
+      ...input,
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+    };
+    state.pledges.unshift(pledge);
+    return pledge;
+  });
+}
+
+export async function getPayoutApprovals(slug: string): Promise<PayoutApprovals> {
+  const state = await load();
+  return state.approvals[slug] ?? emptyApprovals;
+}
+
+export async function approveFounder(slug: string, wallet: string) {
+  return withState((state) => {
+    const current = state.approvals[slug] ?? { ...emptyApprovals };
+    const next = { ...current, founderWallet: wallet };
+    state.approvals[slug] = next;
+    return next;
+  });
+}
+
+export async function approveOperator(slug: string) {
+  return withState((state) => {
+    const current = state.approvals[slug] ?? { ...emptyApprovals };
+    const next = { ...current, operator: true };
+    state.approvals[slug] = next;
+    return next;
+  });
+}
+
+export async function payoutReady(slug: string) {
+  const current = await getPayoutApprovals(slug);
+  return Boolean(current.founderWallet && current.operator);
+}
