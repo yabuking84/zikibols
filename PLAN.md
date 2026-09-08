@@ -339,7 +339,7 @@ Deadline **Sun 13 Sep, 12:00 EDT / 20:00 GST**. Code freeze Friday night; Saturd
 ### Thu 10 Sep — token layer and deploy
 
 - [x] If go: `src/lib/ats.ts`, token/payout routes, token panel copy, `.env.example`. If no-go: label seed totals, handle pending airdrop (mirror check, fall back to pause).
-- [ ] Deploy to a host with a writable disk; copy env; smoke test Check → Pledge.
+- [ ] Deploy to a host with a writable disk (`Dockerfile` / `docker-compose.yml`); copy env; add the origin in Privy; smoke test Check → Pledge.
 - [x] README: AI tools used; Privy UX paragraph; 402 `curl`; two-payment flow; HCS extra point; standards-leverage paragraph; From-scratch statement; ATS section.
 
 ### Fri 11 Sep — rehearsal and freeze
@@ -400,7 +400,7 @@ Fixtures shipped in `src/lib/campaigns.ts`; created campaigns are appended in `.
 
 | Slug | Asset | Story |
 |---|---|---|
-| `harbor-credit` | Invoice receivable bond (`HIB26`) | 90-day Rotterdam freight invoice; coupon when the invoice clears |
+| `harbor-credit` | Invoice receivable bond (`HIB26`) | 90-day Rotterdam freight invoice; coupon when the invoice clears. Seed catalog is **paid** with HashScan ids so a cold deploy still shows the completed lifecycle. |
 | `northwind-farms` | Harvest revenue share (`NWH26`) | Greenhouse working capital; pausable share, coupon after produce sale |
 
 Creator wallets are public Ethereum addresses used as Graph `account(id)` lookups (Aave/Compound/Spark on Ethereum), not Hedera accounts.

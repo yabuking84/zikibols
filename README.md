@@ -105,6 +105,16 @@ NEXT_PUBLIC_CAMPAIGN_TREASURY=0x7d5710637321f540b9ee8e1282c598d9b78f4f91
 
 Copy the rest of `.env.local` as-is. Do not commit secrets.
 
+In the [Privy dashboard](https://dashboard.privy.io) add the public origin to **Allowed origins** (and the `localhost:3000` origin you already use).
+
+On a VPS with Docker:
+
+```bash
+docker compose --env-file .env.local up --build -d
+```
+
+That mounts a named volume at `/data` for `state.json`. Harbor Credit ships with its HashScan lifecycle already in the seed catalog, so a cold start still shows the paid bond. Walk Issue → Coupon live on Northwind Farms.
+
 ---
 
 ## Fill in `.env.local`
