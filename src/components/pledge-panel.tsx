@@ -1,0 +1,196 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
+import {
+  createWalletClient,
+  custom,
+  parseEther,
+  type Hex,
+} from "viem";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import type { Campaign } from "@/lib/campaigns";
+import { hederaTestnet, hashscanTxUrl } from "@/lib/hedera";
+
+const PRESETS = [10, 50, 100];
+
+export function PledgePanel({
+  campaign,
+  diligenceDone = true,
+  onSkip,
+  onPledged,
+}: {
+  campaign: Campaign;
+  diligenceDone?: boolean;
+  onSkip?: () => void;
+  onPledged?: () => void;
+}) {
+  if (!process.env.NEXT_PUBLIC_PRIVY_APP_ID) {
+    return (
+      <div className="space-y-2">
+        <h2 className="text-base font-medium">Pledge</h2>
+        <p className="text-sm text-muted-foreground">
+          Add NEXT_PUBLIC_PRIVY_APP_ID so backers can log in and send HBAR from an
+          embedded wallet.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <PledgeForm
+      campaign={campaign}
+      diligenceDone={diligenceDone}
+      onSkip={onSkip}
+      onPledged={onPledged}
+    />
+  );
+}
+
+function PledgeForm({
+  campaign,
+  diligenceDone,
+  onSkip,
+  onPledged,
+}: {
+  campaign: Campaign;
+  diligenceDone: boolean;
+  onSkip?: () => void;
+  onPledged?: () => void;
+}) {
+  const privy = usePrivy();
+  const { wallets } = useWallets();
+  const [amount, setAmount] = useState("50");
+  const [status, setStatus] = useState<string | null>(null);
+  const [txHash, setTxHash] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const wallet = wallets[0];
+  const treasury = useMemo(
+    () =>
+      (process.env.NEXT_PUBLIC_CAMPAIGN_TREASURY as Hex | undefined) ??
+      campaign.treasuryEvm,
+    [campaign.treasuryEvm],
+  );
+
+  async function pledge() {
+    if (!privy.authenticated) {
+      privy.login();
+      return;
+    }
+    if (!wallet) {
+      setStatus("No Privy wallet yet. Log in again so an embedded wallet can be created.");
+      return;
+    }
+
+    const value = Number(amount);
+    if (!Number.isFinite(value) || value <= 0) {
+      setStatus("Enter a positive HBAR amount.");
+      return;
+    }
+
+    setBusy(true);
+    setStatus("Sending pledge from your Privy wallet on Hedera testnet…");
+    try {
+      await wallet.switchChain(hederaTestnet.id);
+      const provider = await wallet.getEthereumProvider();
+      const client = createWalletClient({
+        account: wallet.address as Hex,
+        chain: hederaTestnet,
+        transport: custom(provider),
+      });
+      const hash = await client.sendTransaction({
+        to: treasury,
+        value: parseEther(String(value)),
+        chain: hederaTestnet,
+      });
+      setTxHash(hash);
+      const recorded = await fetch("/api/pledges", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          campaignSlug: campaign.slug,
+          wallet: wallet.address,
+          amountHbar: value,
+          txHash: hash,
+        }),
+      });
+      if (!recorded.ok) {
+        setStatus("On-chain pledge sent, but the campaign book could not be updated.");
+      } else {
+        setStatus("Pledge sent. This is a real Hedera transfer from your Privy wallet.");
+      }
+      onPledged?.();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Pledge failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-base font-medium">Pledge</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Log in with Privy, then send HBAR from the embedded wallet to the campaign treasury.
+        </p>
+      </div>
+      {!diligenceDone ? (
+        <p className="text-sm text-muted-foreground">
+          Run due diligence first. The agent should check this creator on-chain before you
+          pledge.
+        </p>
+      ) : null}
+      <div className="flex flex-wrap gap-2">
+        {PRESETS.map((preset) => (
+          <Button
+            key={preset}
+            type="button"
+            size="sm"
+            variant={amount === String(preset) ? "default" : "outline"}
+            onClick={() => setAmount(String(preset))}
+          >
+            {preset} ℏ
+          </Button>
+        ))}
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="pledge-amount">Amount (HBAR)</Label>
+        <Input
+          id="pledge-amount"
+          inputMode="decimal"
+          value={amount}
+          onChange={(event) => setAmount(event.target.value)}
+        />
+      </div>
+      <Button className="w-full" onClick={pledge} disabled={busy || !diligenceDone}>
+        {busy
+          ? "Pledging…"
+          : !diligenceDone
+            ? "Check the creator first"
+            : privy.authenticated
+              ? "Pledge with Privy wallet"
+              : "Log in to pledge"}
+      </Button>
+      {!diligenceDone && onSkip ? (
+        <Button type="button" variant="ghost" className="w-full" onClick={onSkip}>
+          Pledge anyway
+        </Button>
+      ) : null}
+      {status ? <p className="text-sm text-muted-foreground">{status}</p> : null}
+      {txHash ? (
+        <a
+          className="inline-block text-sm text-primary underline-offset-4 hover:underline"
+          href={hashscanTxUrl(txHash)}
+          target="_blank"
+          rel="noreferrer"
+        >
+          View pledge on HashScan
+        </a>
+      ) : null}
+    </div>
+  );
+}

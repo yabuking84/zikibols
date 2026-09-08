@@ -1,0 +1,118 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import {
+  assetClassLabel,
+  fundedPercent,
+  type Campaign,
+} from "@/lib/campaigns";
+import type { AgentResult } from "@/lib/types";
+import { hbar } from "@/lib/money";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import { CheckCreator } from "@/components/check-creator";
+import { PledgePanel } from "@/components/pledge-panel";
+import { TokenPanel } from "@/components/token-panel";
+import { RecentPledges } from "@/components/recent-pledges";
+import { cn } from "cn";
+
+export function CampaignWorkspace({ campaign: initial }: { campaign: Campaign }) {
+  const [campaign, setCampaign] = useState(initial);
+  const [diligence, setDiligence] = useState<AgentResult | null>(null);
+  const [skippedCheck, setSkippedCheck] = useState(false);
+  const [pledgeTick, setPledgeTick] = useState(0);
+
+  const refresh = useCallback(async () => {
+    const response = await fetch(`/api/campaigns/${initial.slug}`);
+    const json = (await response.json()) as { campaign?: Campaign };
+    if (json.campaign) setCampaign(json.campaign);
+  }, [initial.slug]);
+
+  useEffect(() => {
+    refresh().catch(() => undefined);
+  }, [refresh]);
+
+  const funded = fundedPercent(campaign);
+  const canPledge = Boolean(diligence) || skippedCheck;
+
+  return (
+    <main className="mx-auto grid w-full max-w-6xl gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+      <article className="space-y-6">
+        <ol className="flex flex-wrap gap-2 text-xs">
+          {[
+            { n: "1", label: "Diligence", on: Boolean(diligence) },
+            { n: "2", label: "Pledge", on: canPledge },
+            { n: "3", label: "Tokenize", on: campaign.tokenLifecycle !== "draft" },
+          ].map((step) => (
+            <li
+              key={step.label}
+              className={cn(
+                "rounded-full border px-2.5 py-1",
+                step.on
+                  ? "border-foreground/20 bg-muted font-medium"
+                  : "text-muted-foreground",
+              )}
+            >
+              {step.n} {step.label}
+            </li>
+          ))}
+        </ol>
+        <div className="space-y-2">
+          <Badge variant="secondary">{assetClassLabel(campaign.assetClass)}</Badge>
+          <h1 className="text-2xl font-bold tracking-tight">{campaign.title}</h1>
+          <p className="text-muted-foreground">{campaign.blurb}</p>
+        </div>
+        <div className="space-y-2">
+          <div className="flex text-sm">
+            <span className="font-medium">
+              {hbar(campaign.pledgedHbar)} of {hbar(campaign.goalHbar)}
+            </span>
+            <span className="ml-auto text-muted-foreground tabular-nums">{funded}%</span>
+          </div>
+          <Progress value={funded} />
+        </div>
+        <p className="text-sm text-muted-foreground">
+          {campaign.backers} backers · {campaign.daysLeft} days left · {campaign.location}
+        </p>
+        <Separator />
+        <section className="space-y-3">
+          <h2 className="text-base font-medium">Story</h2>
+          <p className="leading-7 text-pretty">{campaign.story}</p>
+          <a
+            className="inline-block text-sm text-primary underline-offset-4 hover:underline"
+            href={`https://etherscan.io/address/${campaign.creatorWallet}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Creator on Etherscan
+          </a>
+        </section>
+        <section className="rounded-xl border bg-card p-5">
+          <h2 className="mb-3 text-base font-medium">Recent pledges</h2>
+          <RecentPledges campaignSlug={campaign.slug} refreshKey={pledgeTick} />
+        </section>
+        <section className="rounded-xl border bg-card p-5">
+          <TokenPanel slug={campaign.slug} />
+        </section>
+      </article>
+      <aside className="space-y-6 self-start rounded-xl border bg-card p-5 lg:sticky lg:top-16">
+        <CheckCreator
+          campaignTitle={campaign.title}
+          creatorWallet={campaign.creatorWallet}
+          onResult={setDiligence}
+        />
+        <Separator />
+        <PledgePanel
+          campaign={campaign}
+          diligenceDone={canPledge}
+          onSkip={() => setSkippedCheck(true)}
+          onPledged={() => {
+            setPledgeTick((value) => value + 1);
+            refresh().catch(() => undefined);
+          }}
+        />
+      </aside>
+    </main>
+  );
+}
