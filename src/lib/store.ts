@@ -27,6 +27,7 @@ type StoredState = {
   created: Campaign[];
   pledges: Pledge[];
   approvals: Record<string, PayoutApprovals>;
+  hcsTopicId: string | null;
 };
 
 const RUNTIME_KEYS = [
@@ -53,7 +54,7 @@ function dataFile() {
 }
 
 function emptyState(): StoredState {
-  return { version: 1, runtime: {}, created: [], pledges: [], approvals: {} };
+  return { version: 1, runtime: {}, created: [], pledges: [], approvals: {}, hcsTopicId: null };
 }
 
 function catalog(state: StoredState) {
@@ -93,9 +94,15 @@ async function load(): Promise<StoredState> {
     cache = {
       version: 1,
       runtime: parsed.runtime ?? {},
-      created: Array.isArray(parsed.created) ? parsed.created : [],
+      created: Array.isArray(parsed.created)
+        ? parsed.created.map((campaign) => ({
+            ...campaign,
+            creatorEmail: campaign.creatorEmail ?? null,
+          }))
+        : [],
       pledges: Array.isArray(parsed.pledges) ? parsed.pledges : [],
       approvals: parsed.approvals ?? {},
+      hcsTopicId: parsed.hcsTopicId ?? null,
     };
     cacheMtime = info.mtimeMs;
   } catch {
@@ -169,6 +176,7 @@ export type CreateCampaignInput = {
   story: string;
   creatorName: string;
   creatorWallet: `0x${string}`;
+  creatorEmail: string | null;
   goalHbar: number;
   daysLeft: number;
   location: string;
@@ -260,4 +268,18 @@ export async function approveOperator(slug: string) {
 export async function payoutReady(slug: string) {
   const current = await getPayoutApprovals(slug);
   return Boolean(current.founderWallet && current.operator);
+}
+
+export async function getHcsTopicId() {
+  const fromEnv = process.env.HEDERA_HCS_TOPIC_ID?.trim();
+  if (fromEnv) return fromEnv;
+  const state = await load();
+  return state.hcsTopicId;
+}
+
+export async function setHcsTopicId(topicId: string) {
+  return withState((state) => {
+    state.hcsTopicId = topicId;
+    return topicId;
+  });
 }

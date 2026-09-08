@@ -16,8 +16,8 @@ The product is one app with three load-bearing sponsor integrations:
 | Sponsor | Role in zikibols |
 |---|---|
 | **Privy** | Email/social login → embedded wallet → real HBAR pledge on Hedera testnet |
-| **The Graph** | One Messari lending query against **Aave v3 and Compound v3**, live |
-| **Hedera** | Agent **pays x402** for a risk note; campaigns issue **HTS** bond/share tokens with freeze/pause and a 2-of-2 coupon |
+| **The Graph** | One Messari lending query against **Aave v3, Compound v3, and Spark Lend**, live |
+| **Hedera** | Agent **pays x402** for a risk note; hashes the note onto **HCS**; campaigns issue **HTS** bond/share tokens with freeze/pause and a 2-of-2 coupon |
 
 zikibols is not a general Kickstarter clone. It is a diligence-gated raise for **invoice receivables** and **revenue-share** assets, then a token lifecycle that looks like Asset Tokenization Studio (issue → transfer → freeze/pause → coupon), not a launchpad.
 
@@ -38,7 +38,7 @@ zikibols treats those as the product, not polish.
 ## Product goals
 
 1. **A backer can fund in minutes.** Log in with Privy, send HBAR from an embedded wallet, see the campaign book and HashScan tx update.
-2. **Diligence is paid compute, not a mock.** “Check this creator” queries live Graph data, then the agent pays `/api/risk-report` over Hedera x402 (Blocky402 testnet). The dashboard never invents Graph or x402 data; Integrations shows Ready vs Needs env.
+2. **Diligence is paid compute, not a mock.** “Check this creator” queries live Graph data, then the agent pays `/api/risk-report` over Hedera x402 (Blocky402 testnet). Later that same paid pass should also search the public web for the founder’s **name and email** and compile a sourced profile. The dashboard never invents Graph, x402, or web-search data; Integrations shows Ready vs Needs env.
 3. **The raise becomes a restricted HTS asset.** Issue a bond/share, airdrop one unit, freeze the holder (or pause the token), then release a coupon only after founder (Privy) + treasury operator both approve.
 4. **One demo path, three prize stories.** A judge can walk Dashboard → campaign → Check creator → Pledge → Issue/Transfer/Freeze → 2-of-2 coupon without leaving the app.
 5. **Honesty over theater.** Missing env fails on purpose. Heuristic notes are labeled when no LLM key is set. Skip-diligence is explicit (“Pledge anyway”), not hidden.
@@ -58,9 +58,10 @@ Primary tracks we are building toward. Qualification is judged on **live testnet
 | x402-gated service | `POST /api/risk-report` (`withX402`, exact HBAR, payTo = `HEDERA_PAY_TO_ACCOUNT`) |
 | Consumer | Due-diligence agent in `src/lib/agent.ts` via `buyRiskReport` |
 | Facilitator | `https://api.testnet.blocky402.com` |
-| Evidence | HashScan link on the campaign page after Check this creator |
+| Evidence | HashScan payment + HCS topic links on the campaign page after Check this creator |
+| HCS audit | SHA-256 of the paid note on a consensus topic (`src/lib/hcs.ts`); skipped if operator keys are missing |
 
-Stretch later: metered pricing, HCS audit of the paid note, Scheduled Transactions for coupons.
+Stretch later: metered pricing, Scheduled Transactions for coupons.
 
 ### Hedera — Tokenization of Anything ($6,000)
 
@@ -82,15 +83,15 @@ Gap vs the prize text: **Asset Tokenization Studio SDK is not wired.** The submi
 | Requirement | zikibols |
 |---|---|
 | Standardized schema | Messari lending: **one** `lendingProtocols` + `account` query |
-| Two protocols | Aave v3 + Compound v3 subgraph IDs in `src/lib/graph.ts` |
+| Two+ protocols | Aave v3 + Compound v3 + Spark Lend subgraph IDs in `src/lib/graph.ts` |
 | Live | Graph Gateway key (`THEGRAPH_API_KEY`); no key → Check this creator fails |
-| Leverage | Same query, two books: TVL comparison + creator positions/liquidations |
+| Leverage | Same query, three books: TVL comparison + creator positions/liquidations; one book failing does not kill diligence |
 
 ### The Graph — Best AI use case, from scratch ($5,000)
 
 **Requirement:** Graph is load-bearing; live data; reasoning, not a raw JSON dump.
 
-The agent turns Graph snapshots + the paid risk paragraph into a backer-facing note (LLM if `OPENAI_API_KEY` is set, otherwise a labeled heuristic). That is the AI story: a **risk monitor** over standardized lending, not a chatbot wrapper.
+The agent turns Graph snapshots + the paid risk paragraph into a backer-facing note (LLM if `OPENAI_API_KEY` is set, otherwise a labeled heuristic). That is the AI story: a **risk monitor** over standardized lending, not a chatbot wrapper. Stretch: the same paid loop also compiles an **open-web founder profile** (name + email) with cited URLs, still without inventing hits.
 
 ### Privy — Best financial flow ($2,500)
 
@@ -134,13 +135,16 @@ Stack: Next.js 16, React 19, Privy, viem, `@hashgraph/sdk`, `@x402/{core,fetch,h
 ```
 Backer UI                    Agent                         Hedera testnet
 ─────────                    ─────                         ──────────────
-Campaign page ──POST /api/agent──► query Aave+Compound     Graph Gateway
-                                 │  (same Messari query)
+Campaign page ──POST /api/agent──► query Aave+Compound+Spark Graph Gateway
+                                 │  (same Messari query; one book can fail)
                                  ▼
                               buyRiskReport ──x402──► POST /api/risk-report
                                  │                     (Blocky402 settle)
                                  ▼
                               heuristic or LLM note
+                                 │
+                                 ▼
+                              publishAudit ──HCS──► topic message (note hash)
 
 Privy wallet ──HBAR tx──► campaign treasury (EVM 296)
          └──POST /api/pledges──► .data/state.json + pledgedHbar
@@ -154,17 +158,50 @@ Seed campaign copy lives in `src/lib/campaigns.ts`. Pledges, HTS ids, and payout
 
 ---
 
+## Planned: paid founder profile (OSINT)
+
+Not built yet. Fits the **paid** diligence loop (`POST /api/agent` → x402 risk report), not a free sidebar scrape.
+
+**Why.** On-chain lending history answers “does this wallet exist in Aave / Compound / Spark?” It does not answer “who is Harbor Desk BV?” Backers still need a public-web sketch of the named founder before they pledge.
+
+**Inputs (add to campaign if missing)**
+
+| Field | Today | Needed |
+|---|---|---|
+| `creatorName` | Yes (e.g. Harbor Desk BV) | Search query |
+| `creatorWallet` | Yes (Ethereum `0x…`) | Graph only |
+| `creatorEmail` | **No** | Optional public contact used as a second search query (do not invent an email) |
+
+**Agent steps (when built)**
+
+1. Keep the live Graph books + paid x402 note as they are.
+2. New tool, e.g. `searchFounder`: query a search API (Brave / Tavily / Serper — pick one, env-gated) for `creatorName`, `creatorEmail` if present, and campaign title/location.
+3. Fetch only a few top public pages; extract org, role, news, and controversy **with source URLs**.
+4. Fold a 5–8 sentence **Founder profile** into the paid report (or a second x402-gated path so the web pass is still paid compute).
+5. Show the profile on Check this creator with citations. Hash the profile text onto HCS with the note (`noteSha256` + `profileSha256`).
+6. If search key / email is missing, or every hit 404s: **skip and label it** (“No public-web profile”). Never invent companies, emails, or headlines.
+
+**Guardrails**
+
+- Public web only. No mailbox access, no people-search dumps, no paywalled scrape.
+- Treat email as a query string the founder published on the campaign, not as PII to enrich from leaks.
+- Same honesty rule as Graph: missing search env → Needs setup / skipped step, not a fake LinkedIn blurb.
+
+**Demo beat (after this ships):** Check this creator shows (a) three lending books, (b) paid risk paragraph + HashScan, (c) sourced founder profile, (d) HCS hash of both.
+
+---
+
 ## Demo script (judges)
 
 Target: under five minutes for Hedera; two to four minutes for The Graph.
 
 1. Open the dashboard. Point at Integrations: Privy / Graph / x402 / HTS all **Ready** (or explain any Setup badge — do not fake data).
-2. Open **Harbor Credit**. Click **Check this creator**. Show Aave + Compound TVL, wallet positions, paid note, HashScan payment tx.
+2. Open **Harbor Credit**. Click **Check this creator**. Show Aave + Compound + Spark TVL, wallet positions, paid note, HashScan payment tx, HCS topic if keys are set.
 3. **Log in with Privy**, pledge a small HBAR amount. Show HashScan + Recent pledges + **Your pledges**.
 4. Sidebar **Operator desk**: save backer `0.0.x`, then **Issue token → Transfer share → Freeze / pause**.
 5. **Approve as founder** (Privy) and **Co-sign as treasury**, then **Release coupon**. Show the coupon tx.
 
-Talking points: one Graph query, two protocols; the risk endpoint is paid, not free; the token has freeze/pause keys; coupon needs two people.
+Talking points: one Graph query, three protocols; the risk endpoint is paid, not free; the note hash lands on HCS; the token has freeze/pause keys; coupon needs two people.
 
 ---
 
@@ -179,6 +216,8 @@ These are product debt, not secret bugs:
 | No ATS SDK | Tokenization prize text names Asset Tokenization Studio; we document the HTS equivalent |
 | Coupon is 1000 tinybars | Lifecycle proof, not a real yield |
 | Diligence can be skipped | Fine for a jammed demo; call it out |
+| Founder research is on-chain only | Graph wallet + paid note; no web search of name/email yet |
+| Campaigns have no founder email | Create-campaign stores `creatorName` + wallet only; OSINT needs an optional public email |
 | No tests, no deploy target | Judges must run locally or we host one URL |
 | File store on serverless | Vercel-style read-only disks fall back to process memory |
 
@@ -207,9 +246,10 @@ Order is prize-shaped: **keep the three sponsor stories live**, then deepen the 
 
 - [ ] **ATS:** issue the campaign token through Asset Tokenization Studio; keep freeze + coupon
 - [ ] **Privy B2B:** founder approval via Privy policy / quorum instead of a POST with a wallet string
-- [ ] **Graph:** same lending query on a third standardized protocol, or Subgraph MCP as a second client
-- [ ] **x402 extra:** HCS memo of the paid note, or price the report by Graph row count
+- [x] **Graph:** same lending query on a third standardized protocol, or Subgraph MCP as a second client
+- [x] **x402 extra:** HCS memo of the paid note, or price the report by Graph row count
 - [x] Create-campaign form (asset class, goal, creator wallet) writing into persisted state
+- [ ] **Founder OSINT profile (paid):** during Check this creator, search the public web by founder **name** and **email**, then compile a short sourced profile next to the Graph/x402 note
 
 ### P3 — after ETHOnline
 
@@ -227,7 +267,7 @@ The project is a **successful hackathon submission** if all of the following are
 
 1. A stranger can clone, set env, and complete Check → Pledge → Issue → Freeze → Coupon on testnet.
 2. Graph calls are live; x402 payment appears on HashScan; Privy transfer appears on HashScan; HTS token appears on HashScan.
-3. Judges can name the three sponsor sentences without a slide: *same query two protocols*, *agent paid for the note*, *embedded wallet pledged HBAR*.
+3. Judges can name the three sponsor sentences without a slide: *same query three protocols*, *agent paid for the note*, *embedded wallet pledged HBAR*.
 4. The video is ≤5 minutes and does not cut away from a failed env.
 
 The project is a **successful product sketch** (beyond prizes) if a founder could describe Harbor Credit to an invoice desk and a backer could explain why freeze exists.
@@ -239,7 +279,8 @@ The project is a **successful product sketch** (beyond prizes) if a founder coul
 - Mainnet money or a real securities offering
 - A full Kickstarter (comments, rewards tiers, social feed)
 - Replacing ATS with a new tokenization standard
-- Mock Graph / mock x402 fallbacks that look “Ready”
+- Mock Graph / mock x402 / mock OSINT fallbacks that look “Ready”
+- Private people-search, leaked credential dumps, or scraping a founder’s inbox
 - Mobile apps, chain abstraction, or extra L2s
 
 ---
@@ -253,7 +294,7 @@ Used as fixtures until create-campaign exists.
 | `harbor-credit` | Invoice receivable bond (`HIB26`) | 90-day Rotterdam freight invoice; coupon when the invoice clears |
 | `northwind-farms` | Harvest revenue share (`NWH26`) | Greenhouse working capital; freezeable share, coupon after produce sale |
 
-Creator wallets are public Ethereum addresses used as Graph `account(id)` lookups (Aave/Compound on Ethereum), not Hedera accounts.
+Creator wallets are public Ethereum addresses used as Graph `account(id)` lookups (Aave/Compound/Spark on Ethereum), not Hedera accounts.
 
 ---
 
@@ -279,4 +320,5 @@ See [README.md](./README.md) for env vars and the demo flow. Copy `.env.example`
 | Token + coupon UI | `src/components/token-panel.tsx`, `src/app/campaigns/[slug]/operate/page.tsx` |
 | Create campaign | `src/app/campaigns/new/page.tsx`, `POST /api/campaigns` |
 | Diligence UI | `src/components/check-creator.tsx` |
+| HCS paid-note hash | `src/lib/hcs.ts` |
 | Env badges | `src/lib/status.ts`, `src/components/integration-status.tsx` |

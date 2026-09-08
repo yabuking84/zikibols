@@ -9,6 +9,11 @@ export const LENDING_SUBGRAPHS = {
     network: "ethereum",
     subgraphId: "AwoxEZbiWLvv6e3QdvdMZw4WDURdGbvPfHmZRc8Dpfz9",
   },
+  "spark-lend": {
+    label: "Spark Lend",
+    network: "ethereum",
+    subgraphId: "GbKdmBe4ycCYCQLQSjqGg6UHYoYfbyJyq5WrG35pv1si",
+  },
 } as const;
 
 export type ProtocolSlug = keyof typeof LENDING_SUBGRAPHS;
@@ -198,9 +203,30 @@ export async function queryCreator(
 
 export async function queryStandardizedLending(wallet: string) {
   const protocols = Object.keys(LENDING_SUBGRAPHS) as ProtocolSlug[];
-  const lending = await Promise.all(protocols.map((protocol) => queryLending(protocol)));
-  const accounts = await Promise.all(
-    protocols.map((protocol) => queryCreator(protocol, wallet)),
+  const settled = await Promise.all(
+    protocols.map(async (protocol) => {
+      try {
+        const [lending, account] = await Promise.all([
+          queryLending(protocol),
+          queryCreator(protocol, wallet),
+        ]);
+        return { protocol, lending, account };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "query failed";
+        return { protocol, error: `${LENDING_SUBGRAPHS[protocol].label}: ${message}` };
+      }
+    }),
   );
-  return { lending, accounts };
+
+  const lending = settled.flatMap((row) => ("lending" in row && row.lending ? [row.lending] : []));
+  const accounts = settled.flatMap((row) => ("account" in row && row.account ? [row.account] : []));
+  const errors = settled.flatMap((row) => ("error" in row && row.error ? [row.error] : []));
+
+  if (lending.length === 0) {
+    throw new Error(
+      `The Graph returned no live lending books. ${errors.join(" ")}`.trim(),
+    );
+  }
+
+  return { lending, accounts, errors };
 }

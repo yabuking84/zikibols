@@ -60,6 +60,10 @@ async function withClient<T>(run: (client: Client) => Promise<T>) {
   }
 }
 
+export async function withHederaClient<T>(run: (client: Client) => Promise<T>) {
+  return withClient(run);
+}
+
 export async function issueCampaignToken(input: {
   name: string;
   symbol: string;

@@ -1,4 +1,5 @@
 import type { CreatorAccount, LendingSnapshot } from "@/lib/graph";
+import type { FounderProfile } from "@/lib/founder-search";
 
 export type Pledge = {
   id: string;
@@ -15,7 +16,7 @@ export type PayoutApprovals = {
 };
 
 export type AgentStep = {
-  tool: "queryLending" | "buyRiskReport";
+  tool: "queryLending" | "searchFounder" | "buyRiskReport" | "publishAudit";
   detail: string;
 };
 
@@ -24,11 +25,16 @@ export type AgentResult = {
   steps: AgentStep[];
   lending: LendingSnapshot[];
   accounts: CreatorAccount[];
+  profile: FounderProfile;
   payment: {
     success: boolean;
     transaction: string;
     network: string;
     payer?: string;
+  } | null;
+  audit: {
+    topicId: string;
+    transactionId: string;
   } | null;
   usedLlm: boolean;
 };

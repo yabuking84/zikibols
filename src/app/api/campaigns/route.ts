@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   isEvmAddress,
+  isPublicEmail,
   toCatalogItem,
   type AssetClass,
 } from "@/lib/campaigns";
@@ -24,6 +25,7 @@ export async function POST(request: NextRequest) {
   const story = typeof body.story === "string" ? body.story.trim() : "";
   const creatorName = typeof body.creatorName === "string" ? body.creatorName.trim() : "";
   const creatorWallet = typeof body.creatorWallet === "string" ? body.creatorWallet.trim() : "";
+  const creatorEmailRaw = typeof body.creatorEmail === "string" ? body.creatorEmail.trim() : "";
   const location = typeof body.location === "string" ? body.location.trim() : "";
   const tokenName = typeof body.tokenName === "string" ? body.tokenName.trim() : "";
   const tokenSymbol = typeof body.tokenSymbol === "string" ? body.tokenSymbol.trim().toUpperCase() : "";
@@ -37,6 +39,12 @@ export async function POST(request: NextRequest) {
   if (!isEvmAddress(creatorWallet)) {
     return NextResponse.json(
       { error: "creatorWallet must be a 0x-prefixed 40-hex Ethereum address for Graph lookups." },
+      { status: 400 },
+    );
+  }
+  if (creatorEmailRaw && !isPublicEmail(creatorEmailRaw)) {
+    return NextResponse.json(
+      { error: "creatorEmail must be a valid public email, or left empty." },
       { status: 400 },
     );
   }
@@ -62,6 +70,7 @@ export async function POST(request: NextRequest) {
     story,
     creatorName,
     creatorWallet,
+    creatorEmail: creatorEmailRaw ? creatorEmailRaw.toLowerCase() : null,
     goalHbar,
     daysLeft,
     location,

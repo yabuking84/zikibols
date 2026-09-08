@@ -7,6 +7,7 @@ import {
 } from "@/lib/x402";
 import { writeRiskNote } from "@/lib/risk-note";
 import type { CreatorAccount, LendingSnapshot } from "@/lib/graph";
+import type { FounderProfile } from "@/lib/founder-search";
 
 async function handler(request: NextRequest): Promise<NextResponse> {
   const body = (await request.json()) as {
@@ -14,6 +15,7 @@ async function handler(request: NextRequest): Promise<NextResponse> {
     creatorWallet?: string;
     lending?: LendingSnapshot[];
     accounts?: CreatorAccount[];
+    profile?: FounderProfile | null;
   };
 
   if (!body.campaignTitle || !body.creatorWallet || !body.lending || !body.accounts) {
@@ -28,6 +30,7 @@ async function handler(request: NextRequest): Promise<NextResponse> {
     creatorWallet: body.creatorWallet,
     lending: body.lending,
     accounts: body.accounts,
+    profile: body.profile,
   });
 
   return NextResponse.json({

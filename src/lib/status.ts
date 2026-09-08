@@ -1,10 +1,12 @@
-import { getBackerAccountId, isHederaOperatorConfigured } from "@/lib/hts";
+import { isHederaOperatorConfigured, getBackerAccountId } from "@/lib/hts";
+import { isSearchConfigured } from "@/lib/founder-search";
 
 export type IntegrationStatus = {
   privy: boolean;
   graph: boolean;
   x402: boolean;
   hts: boolean;
+  search: boolean;
   backer: boolean;
 };
 
@@ -18,6 +20,7 @@ export function getIntegrationStatus(): IntegrationStatus {
         process.env.HEDERA_AGENT_PRIVATE_KEY,
     ),
     hts: isHederaOperatorConfigured(),
+    search: isSearchConfigured(),
     backer: Boolean(getBackerAccountId()),
   };
 }

@@ -14,6 +14,7 @@ export type Campaign = {
   story: string;
   creatorName: string;
   creatorWallet: `0x${string}`;
+  creatorEmail: string | null;
   goalHbar: number;
   pledgedHbar: number;
   backers: number;
@@ -43,6 +44,7 @@ export const campaigns: Campaign[] = [
       "Harbor Credit buys verified invoices from a Rotterdam freight desk and issues a short-duration bond to backers. Coupon is paid when the invoice clears. The campaign wallet can only release funds after two operators approve the payout.",
     creatorName: "Harbor Desk BV",
     creatorWallet: "0x1111111254eeb25477b68fb85ed929f73a960582",
+    creatorEmail: null,
     goalHbar: 12000,
     pledgedHbar: 4380,
     backers: 27,
@@ -67,9 +69,10 @@ export const campaigns: Campaign[] = [
     blurb:
       "Revenue-share on a winter greenhouse crop. Backers receive a transfer-restricted share token.",
     story:
-      "Northwind is raising working capital for a greenhouse expansion. Backers receive a revenue-share token (not a meme ticker): freezeable, with a coupon once produce is sold. Before you pledge, the agent checks the creator’s public DeFi history on Aave and Compound.",
+      "Northwind is raising working capital for a greenhouse expansion. Backers receive a revenue-share token (not a meme ticker): freezeable, with a coupon once produce is sold. Before you pledge, the agent checks the creator’s public DeFi history on Aave, Compound, and Spark.",
     creatorName: "Northwind Cooperative",
     creatorWallet: "0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503",
+    creatorEmail: null,
     goalHbar: 8000,
     pledgedHbar: 6120,
     backers: 41,
@@ -134,5 +137,9 @@ export function slugifyCampaign(title: string) {
 
 export function isEvmAddress(value: string): value is `0x${string}` {
   return /^0x[a-fA-F0-9]{40}$/.test(value);
+}
+
+export function isPublicEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 

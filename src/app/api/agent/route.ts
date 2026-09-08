@@ -13,6 +13,9 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as {
       campaignTitle?: string;
       creatorWallet?: string;
+      creatorName?: string;
+      creatorEmail?: string | null;
+      location?: string;
     };
 
     if (!body.campaignTitle || !body.creatorWallet) {
@@ -26,6 +29,9 @@ export async function POST(request: NextRequest) {
       origin: originFrom(request),
       campaignTitle: body.campaignTitle,
       creatorWallet: body.creatorWallet,
+      creatorName: body.creatorName?.trim() || "Unknown creator",
+      creatorEmail: body.creatorEmail?.trim() || null,
+      location: body.location?.trim() || "",
     });
 
     return NextResponse.json(result);

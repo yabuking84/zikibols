@@ -19,8 +19,8 @@ Hackathon prize mapping and remaining work: [PLAN.md](./PLAN.md).
 | Piece | In plain words |
 |---|---|
 | **Privy** | Log in with email or social. You get an embedded wallet and pledge real HBAR on Hedera testnet. |
-| **The Graph** | One lending query against **Aave v3** and **Compound v3**. Same schema, two books. |
-| **Hedera** | The agent **pays** for a written risk note (x402). Operators issue an HTS bond/share, freeze it, then pay a coupon after a 2-of-2 sign-off. |
+| **The Graph** | One lending query against **Aave v3**, **Compound v3**, and **Spark Lend**. Same schema, three books. |
+| **Hedera** | The agent **pays** for a written risk note (x402), then hashes it onto **HCS**. Operators issue an HTS bond/share, freeze it, then pay a coupon after a 2-of-2 sign-off. |
 
 Two seed campaigns ship with the app:
 
@@ -68,7 +68,7 @@ Without Privy, you can still browse campaigns. You cannot log in or pledge.
 |---|---|
 | `THEGRAPH_API_KEY` | [The Graph Subgraph Studio](https://thegraph.com/studio/) gateway key. |
 
-Without this key, **Check this creator** fails on purpose. There is no fake Graph fallback.
+Without this key, **Check this creator** fails on purpose. There is no fake Graph fallback. The same Messari query hits Aave v3, Compound v3, and Spark Lend; one book failing still returns the others.
 
 ### 3. Hedera x402 — the agent pays for the risk note
 
@@ -100,7 +100,8 @@ Fund the operator (or agent) account on testnet. Issuing a token and paying a co
 |---|---|
 | `OPENAI_API_KEY` | Rewrites the risk note with an LLM. If missing, the agent still queries Graph, still pays x402, and writes a **heuristic** note (labeled in the UI). |
 | `OPENAI_MODEL` | Defaults to `gpt-4o-mini` if you set a key. |
-| `ZIKIBOLS_DATA_PATH` | Where pledges, token ids, and 2-of-2 approvals are saved. Default: `.data/state.json`. |
+| `ZIKIBOLS_DATA_PATH` | Where pledges, token ids, HCS topic id, and 2-of-2 approvals are saved. Default: `.data/state.json`. |
+| `HEDERA_HCS_TOPIC_ID` | Optional. Reuse an existing consensus topic for paid-note hashes. If unset, the first Check this creator with operator keys creates one. |
 
 Never commit `.env.local`.
 
@@ -130,9 +131,10 @@ Use **⌘K** (or **Ctrl+K**) to search campaigns. Log in from the sidebar. Theme
 1. Open a campaign, e.g. Harbor Credit, from the dashboard or the sidebar.
 2. Read the story and the progress bar.
 3. Click **Check this creator**. Wait while the agent:
-   - queries Aave v3 and Compound v3
+   - queries Aave v3, Compound v3, and Spark Lend (one Messari schema)
    - pays for a risk note on Hedera
-   - shows TVL, positions, a written summary, and a HashScan payment link
+   - hashes that note onto HCS when operator keys are set
+   - shows TVL, positions, a written summary, HashScan payment, and HCS links
 4. Log in with Privy (email or social). An embedded wallet is created for you.
 5. Fund that wallet with **Hedera testnet HBAR** if it is empty (Privy + [Hedera faucet](https://portal.hedera.com/)).
 6. Choose an amount (10 / 50 / 100 ℏ, or type your own) and click **Pledge with Privy wallet**.
@@ -164,8 +166,9 @@ Coupon size is a lifecycle proof (tinybars), not a real yield calculation.
 
 | Layer | Survives restart? | What it is |
 |---|---|---|
-| **On-chain (Hedera testnet)** | Yes | Privy HBAR pledges, x402 risk-note payment, HTS issue / airdrop / freeze / coupon. [HashScan](https://hashscan.io/testnet) is the source of truth. |
-| **The Graph** | Live query | Aave v3 + Compound v3 via the Graph Gateway. No key → Check this creator fails. |
+| **On-chain (Hedera testnet)** | Yes | Privy HBAR pledges, x402 risk-note payment, HCS topic messages, HTS issue / airdrop / freeze / coupon. [HashScan](https://hashscan.io/testnet) is the source of truth. |
+| **The Graph** | Live query | Aave v3 + Compound v3 + Spark Lend via the Graph Gateway. One book failing does not kill Check this creator. No key → Check this creator fails. |
+| **HCS audit** | Yes, on disk + chain | Topic id in `.data/state.json` or `HEDERA_HCS_TOPIC_ID`. Message is a SHA-256 of the paid note, not the full paragraph. Skip if operator keys are missing. |
 | **Campaign book** | Yes, on disk | Pledges, created campaigns, token ids, backer account, and 2-of-2 approvals in `.data/state.json` (or `ZIKIBOLS_DATA_PATH`). Lost only if you delete that file. On a read-only host this falls back to process memory. |
 | **Seed copy** | In git | Harbor Credit and Northwind Farms text, goals, and starting pledged totals in `src/lib/campaigns.ts`. |
 
@@ -178,7 +181,8 @@ Check **Integrations** on the dashboard first.
 | Symptom | Likely cause |
 |---|---|
 | Pledge says add `NEXT_PUBLIC_PRIVY_APP_ID` | Privy app id missing. Restart after editing `.env.local`. |
-| **Check this creator** errors | `THEGRAPH_API_KEY` missing or invalid. |
+| **Check this creator** errors | `THEGRAPH_API_KEY` missing or invalid, or every lending book failed. |
+| Check runs Graph but HCS link is missing | Expected without operator/agent Hedera keys. Diligence still succeeds. |
 | Check runs Graph but fails on the paid note | x402 env incomplete, or the agent account has no testnet HBAR. |
 | **Issue token** stays disabled | Operator/agent Hedera keys missing, or the token is already issued. |
 | **Transfer share** stays disabled | Save a backer account `0.0.x` on the Operator desk (or set `HEDERA_BACKER_ACCOUNT_ID`), and issue the token first. |
@@ -195,13 +199,16 @@ This is **Hedera testnet** only. Do not use mainnet keys or real money.
 ```
 Backer UI                    Agent                         Hedera testnet
 ─────────                    ─────                         ──────────────
-Campaign page ──POST /api/agent──► query Aave+Compound     Graph Gateway
-                                 │  (same Messari query)
+Campaign page ──POST /api/agent──► query Aave+Compound+Spark Graph Gateway
+                                 │  (same Messari query; one book can fail)
                                  ▼
                               buyRiskReport ──x402──► POST /api/risk-report
                                  │                     (Blocky402 settle)
                                  ▼
                               heuristic or LLM note
+                                 │
+                                 ▼
+                              publishAudit ──HCS──► topic message (note hash)
 
 Privy wallet ──HBAR tx──► campaign treasury (EVM 296)
          └──POST /api/pledges──► .data/state.json + pledgedHbar
@@ -217,6 +224,7 @@ Operator desk (`/campaigns/[slug]/operate`)
 | Persisted book | `src/lib/store.ts` |
 | Graph lending query | `src/lib/graph.ts` |
 | Agent tool loop | `src/lib/agent.ts`, `src/app/api/agent/route.ts` |
+| HCS paid-note hash | `src/lib/hcs.ts` |
 | Paid risk note | `src/app/api/risk-report/route.ts` |
 | Privy pledge UI | `src/components/pledge-panel.tsx` |
 | Operator desk | `src/app/campaigns/[slug]/operate/page.tsx` |

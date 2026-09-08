@@ -185,8 +185,8 @@ export function CreateCampaignForm() {
         />
       </div>
       <p className="text-xs text-muted-foreground">
-        The creator wallet is the Ethereum address The Graph looks up on Aave v3 and
-        Compound v3. The raise still settles in HBAR on Hedera testnet.
+        The creator wallet is the Ethereum address The Graph looks up on Aave v3,
+        Compound v3, and Spark Lend. The raise still settles in HBAR on Hedera testnet.
       </p>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
       <Button type="submit" disabled={busy}>
