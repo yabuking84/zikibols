@@ -1,5 +1,5 @@
 /** Server-only campaign book. Do not import from Client Components. */
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   campaigns as seedCampaigns,
@@ -42,6 +42,7 @@ const RUNTIME_KEYS = [
 const emptyApprovals: PayoutApprovals = { founderWallet: null, operator: false };
 
 let cache: StoredState | null = null;
+let cacheMtime = -1;
 let writeTail: Promise<void> = Promise.resolve();
 
 function dataFile() {
@@ -83,9 +84,11 @@ function hydrate(seed: Campaign, state: StoredState): Campaign {
 }
 
 async function load(): Promise<StoredState> {
-  if (cache) return cache;
   try {
-    const raw = await readFile(dataFile(), "utf8");
+    const file = dataFile();
+    const info = await stat(file);
+    if (cache && info.mtimeMs === cacheMtime) return cache;
+    const raw = await readFile(file, "utf8");
     const parsed = JSON.parse(raw) as Partial<StoredState>;
     cache = {
       version: 1,
@@ -94,8 +97,11 @@ async function load(): Promise<StoredState> {
       pledges: Array.isArray(parsed.pledges) ? parsed.pledges : [],
       approvals: parsed.approvals ?? {},
     };
+    cacheMtime = info.mtimeMs;
   } catch {
+    if (cache) return cache;
     cache = emptyState();
+    cacheMtime = 0;
   }
   return cache;
 }
@@ -108,8 +114,9 @@ async function persist(state: StoredState) {
     const tmp = `${file}.${process.pid}.tmp`;
     await writeFile(tmp, `${JSON.stringify(state, null, 2)}\n`, "utf8");
     await rename(tmp, file);
+    cacheMtime = (await stat(file)).mtimeMs;
   } catch {
-    // Serverless / read-only disks still keep the in-memory book for this process.
+    cacheMtime = Date.now();
   }
 }
 
@@ -184,8 +191,8 @@ export async function createCampaign(input: CreateCampaignInput) {
     }
 
     const treasury =
-      (process.env.NEXT_PUBLIC_CAMPAIGN_TREASURY as `0x${string}` | undefined) ??
-      seedCampaigns[0]?.treasuryEvm ??
+      process.env.NEXT_PUBLIC_CAMPAIGN_TREASURY ||
+      seedCampaigns[0]?.treasuryEvm ||
       "0x0000000000000000000000000000000002e1a9a0";
 
     const campaign: Campaign = {
@@ -200,7 +207,7 @@ export async function createCampaign(input: CreateCampaignInput) {
       freezeTxId: null,
       payoutTxId: null,
       backerAccountId: null,
-      treasuryEvm: treasury,
+      treasuryEvm: treasury as `0x${string}`,
       imageHue: input.assetClass === "invoice-receivable" ? "32 42% 42%" : "152 28% 32%",
     };
     state.created.push(campaign);

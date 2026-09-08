@@ -277,5 +277,6 @@ See [README.md](./README.md) for env vars and the demo flow. Copy `.env.example`
 | 2-of-2 flags | `src/lib/payouts.ts` |
 | Privy pledge UI | `src/components/pledge-panel.tsx` |
 | Token + coupon UI | `src/components/token-panel.tsx`, `src/app/campaigns/[slug]/operate/page.tsx` |
+| Create campaign | `src/app/campaigns/new/page.tsx`, `POST /api/campaigns` |
 | Diligence UI | `src/components/check-creator.tsx` |
 | Env badges | `src/lib/status.ts`, `src/components/integration-status.tsx` |
