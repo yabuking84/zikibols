@@ -10,6 +10,8 @@ import {
   HEDERA_TESTNET_CAIP2,
   X402_PRICE_TINYBARS,
 } from "@/lib/hedera";
+import { createReceiverAccount, isHederaOperatorConfigured } from "@/lib/hts";
+import { getX402PayToAccountId, setX402PayToAccountId } from "@/lib/store";
 
 export const RISK_REPORT_PATH = "/api/risk-report";
 
@@ -21,6 +23,43 @@ export function isX402ClientConfigured() {
   return Boolean(
     process.env.HEDERA_AGENT_ACCOUNT_ID && process.env.HEDERA_AGENT_PRIVATE_KEY,
   );
+}
+
+export function isX402PayToDistinct() {
+  const payTo = process.env.HEDERA_PAY_TO_ACCOUNT?.trim();
+  const agent = process.env.HEDERA_AGENT_ACCOUNT_ID?.trim();
+  return Boolean(payTo && agent && payTo !== agent);
+}
+
+let resolvingPayTo: Promise<string> | null = null;
+
+export async function resolveX402PayTo() {
+  if (!resolvingPayTo) {
+    resolvingPayTo = resolveX402PayToInner().catch((error) => {
+      resolvingPayTo = null;
+      throw error;
+    });
+  }
+  return resolvingPayTo;
+}
+
+async function resolveX402PayToInner() {
+  const envPayTo = process.env.HEDERA_PAY_TO_ACCOUNT?.trim() ?? "";
+  const agent = process.env.HEDERA_AGENT_ACCOUNT_ID?.trim() ?? "";
+  if (envPayTo && envPayTo !== agent) return envPayTo;
+
+  const stored = await getX402PayToAccountId();
+  if (stored && stored !== agent) return stored;
+
+  if (!isHederaOperatorConfigured()) {
+    throw new Error(
+      "HEDERA_PAY_TO_ACCOUNT must differ from HEDERA_AGENT_ACCOUNT_ID, or set operator/agent keys so zikibols can create a dedicated x402 receiver.",
+    );
+  }
+
+  const created = await createReceiverAccount("zikibols x402 payTo");
+  await setX402PayToAccountId(created.accountId);
+  return created.accountId;
 }
 
 export function getResourceServer() {
@@ -38,12 +77,7 @@ export function getResourceServer() {
   );
 }
 
-export function getRiskReportRouteConfig(): RouteConfig {
-  const payTo = process.env.HEDERA_PAY_TO_ACCOUNT;
-  if (!payTo) {
-    throw new Error("HEDERA_PAY_TO_ACCOUNT is missing");
-  }
-
+export function getRiskReportRouteConfig(payTo: string): RouteConfig {
   return {
     accepts: {
       scheme: "exact",
@@ -65,6 +99,7 @@ export async function buyRiskReport(origin: string, body: unknown) {
       "HEDERA_AGENT_ACCOUNT_ID and HEDERA_AGENT_PRIVATE_KEY are required for the agent to pay x402.",
     );
   }
+  await resolveX402PayTo();
 
   const rawKey = process.env.HEDERA_AGENT_PRIVATE_KEY!;
   const privateKey = rawKey.startsWith("0x")
@@ -84,9 +119,9 @@ export async function buyRiskReport(origin: string, body: unknown) {
         {
           network: HEDERA_TESTNET_CAIP2,
           asset: HBAR_ASSET_ID,
-          maxAmountPerPayment: process.env.X402_PRICE_TINYBARS ?? X402_PRICE_TINYBARS,
         },
       ],
+      maxAmountPerPayment: false,
     });
 
   const fetchWithPay = wrapFetchWithPayment(fetch, client);
@@ -104,8 +139,24 @@ export async function buyRiskReport(origin: string, body: unknown) {
     : null;
 
   if (!response.ok) {
+    const requiredHeader =
+      response.headers.get("PAYMENT-REQUIRED") ??
+      response.headers.get("payment-required");
+    let challenge = "";
+    if (requiredHeader) {
+      try {
+        const json = JSON.parse(
+          Buffer.from(requiredHeader, "base64url").toString("utf8"),
+        ) as { error?: string };
+        challenge = json.error ?? "payment required";
+      } catch {
+        challenge = "unreadable payment-required header";
+      }
+    }
     const text = await response.text();
-    throw new Error(`Risk report request failed (${response.status}): ${text}`);
+    throw new Error(
+      `Risk report request failed (${response.status}): ${challenge || text || "empty body"}`,
+    );
   }
 
   const report = (await response.json()) as Record<string, unknown>;

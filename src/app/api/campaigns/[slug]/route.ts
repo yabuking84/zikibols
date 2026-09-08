@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { loadCampaign } from "@/lib/store";
+import { listPledges, loadCampaign } from "@/lib/store";
 import { getPayoutApprovals, payoutReady } from "@/lib/payouts";
 import { getBackerAccountId, isHederaOperatorConfigured } from "@/lib/hts";
+import { hederaAccountFromEvm } from "@/lib/hedera";
 
 export async function GET(
   _request: Request,
@@ -15,11 +16,22 @@ export async function GET(
 
   const approvals = await getPayoutApprovals(slug);
   const backerAccountId = campaign.backerAccountId || getBackerAccountId() || null;
+  const latest = (await listPledges(slug))[0];
+  const suggestedBackerAccountId =
+    latest?.hederaAccountId ||
+    (latest ? await hederaAccountFromEvm(latest.wallet) : null);
   return NextResponse.json({
     campaign,
     approvals,
     payoutReady: await payoutReady(slug),
     operatorConfigured: isHederaOperatorConfigured(),
     backerAccountId,
+    suggestedBacker: latest
+      ? {
+          wallet: latest.wallet,
+          accountId: suggestedBackerAccountId,
+          txHash: latest.txHash,
+        }
+      : null,
   });
 }

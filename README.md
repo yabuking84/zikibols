@@ -57,6 +57,12 @@ Open [http://localhost:3000](http://localhost:3000).
 
 The dashboard **Integrations** row is the source of truth. Each card is **Ready** or **Needs env**. Fill `.env.local` until the pieces you want to demo are Ready, then restart `npm run dev`.
 
+### Public URL for judges
+
+Host `npm run build && npm run start` on a VM with a **writable disk** so `.data/state.json` survives. Vercel-style read-only filesystems keep the UI but lose the campaign book on restart (on-chain HashScan txs still stand). Copy the same env vars as `.env.local` into the host. Do not commit secrets.
+
+P0 still includes recording the ≤5 min demo with HashScan links in frame (see [PLAN.md](./PLAN.md)).
+
 ---
 
 ## Fill in `.env.local`
@@ -94,7 +100,7 @@ Create a funded Hedera **testnet** account at the [Hedera portal](https://portal
 
 | Variable | What it is |
 |---|---|
-| `HEDERA_PAY_TO_ACCOUNT` | Account that **receives** the small x402 fee (e.g. `0.0.xxxxx`). |
+| `HEDERA_PAY_TO_ACCOUNT` | Account that **receives** the small x402 fee. Prefer a **different** id from the agent. If they match, the first Check this creator creates a dedicated receiver (costs a little testnet HBAR) and stores it in `.data/state.json`. |
 | `HEDERA_AGENT_ACCOUNT_ID` | Account the agent **pays from**. Must have testnet HBAR. |
 | `HEDERA_AGENT_PRIVATE_KEY` | Private key for that agent account. |
 | `X402_FACILITATOR_URL` | Defaults to `https://api.testnet.blocky402.com`. Leave it unless you know you need another facilitator. |
@@ -169,7 +175,7 @@ Token issue / freeze / coupon are **not** on this page. Those live on the Operat
 ### As an operator
 
 1. Open **Operator desk** in the sidebar, or go to `/campaigns/<slug>/operate`.
-2. **Save backer** — Hedera account `0.0.xxxxx` that should receive one share. You can still fall back to `HEDERA_BACKER_ACCOUNT_ID` in env.
+2. **Save backer** — Hedera account `0.0.xxxxx` that should receive one share. After a Privy pledge, the desk offers **Use this account** by mapping that wallet through the Hedera mirror node. You can still type an account, or fall back to `HEDERA_BACKER_ACCOUNT_ID`.
 3. **Issue token** — creates the HTS bond or share on Hedera testnet. You get a token id and HashScan link.
 4. **Transfer share** — airdrops **one** unit to that backer account.
 5. **Freeze / pause** — freezes that holder, or pauses the token if there is no backer account.
@@ -204,9 +210,9 @@ Check **Integrations** on the dashboard first.
 | **Check this creator** errors | `THEGRAPH_API_KEY` missing or invalid, or every lending book failed. |
 | Check runs but founder profile is skipped | Expected without `TAVILY_API_KEY`, or no public-web hits. Diligence still succeeds. |
 | Check runs Graph but HCS link is missing | Expected without operator/agent Hedera keys. Diligence still succeeds. |
-| Check runs Graph but fails on the paid note | x402 env incomplete, or the agent account has no testnet HBAR. |
+| Check runs Graph but fails on the paid note | x402 env incomplete, or the agent account has no testnet HBAR. Same payTo and agent is OK: the app creates a dedicated receiver on first check. |
 | **Issue token** stays disabled | Operator/agent Hedera keys missing, or the token is already issued. |
-| **Transfer share** stays disabled | Save a backer account `0.0.x` on the Operator desk (or set `HEDERA_BACKER_ACCOUNT_ID`), and issue the token first. |
+| **Transfer share** stays disabled | Issue the token, then save a backer `0.0.x`. After a Privy pledge, use **Use this account** on the Operator desk (or set `HEDERA_BACKER_ACCOUNT_ID`). |
 | **Release coupon** stays disabled | Freeze first, then both **Approve as founder** and **Co-sign as treasury**. |
 | Pledge sent but “campaign book could not be updated” | On-chain transfer succeeded; local `.data/state.json` write failed. HashScan still has the tx. |
 | Heuristic note instead of LLM note | Expected without `OPENAI_API_KEY`. |

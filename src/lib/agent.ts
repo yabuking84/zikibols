@@ -1,6 +1,7 @@
 import { buyRiskReport } from "@/lib/x402";
 import { publishRiskAudit } from "@/lib/hcs";
 import { searchFounder, type FounderProfile } from "@/lib/founder-search";
+import { writeRiskNote } from "@/lib/risk-note";
 import {
   queryStandardizedLending,
   type CreatorAccount,
@@ -52,9 +53,11 @@ function heuristicSummary(
       ? `This creator wallet has no open positions in the standardized ${labels} subgraphs, so on-chain lending history is thin — treat that as unknown risk, not a green light.`
       : `The wallet has ${open} open lending position(s) across ${labels} and ${liquidations} recorded liquidation(s).`;
 
-  const web =
-    profile.profile ??
-    (profile.skipped ? `Public-web founder profile skipped: ${profile.skipped}` : "");
+  const web = profile.skipped
+    ? `Public-web founder profile skipped: ${profile.skipped}`
+    : profile.sources.length
+      ? `Public-web search returned ${profile.sources.length} cited source(s); see Founder profile.`
+      : "";
 
   return [
     `Due diligence for ${title}.`,
@@ -143,24 +146,44 @@ export async function runDueDiligence(input: {
       : `Public web: ${profile.sources.length} source(s) for ${input.creatorName}`,
   });
 
-  const paid = await buyRiskReport(input.origin, {
-    campaignTitle: input.campaignTitle,
-    creatorWallet: input.creatorWallet,
-    lending,
-    accounts,
-    profile,
-  });
-  steps.push({
-    tool: "buyRiskReport",
-    detail: paid.payment?.transaction
-      ? `Paid x402 on Hedera · ${paid.payment.transaction}`
-      : "Paid x402 on Hedera",
-  });
-
-  const paidNote =
-    typeof paid.report.note === "string"
-      ? paid.report.note
-      : "Paid risk endpoint returned no note.";
+  let payment: AgentResult["payment"] = null;
+  let paidNote: string;
+  try {
+    const paid = await buyRiskReport(input.origin, {
+      campaignTitle: input.campaignTitle,
+      creatorWallet: input.creatorWallet,
+      lending,
+      accounts,
+      profile,
+    });
+    payment = paid.payment;
+    paidNote =
+      typeof paid.report.note === "string"
+        ? paid.report.note
+        : "Paid risk endpoint returned no note.";
+    steps.push({
+      tool: "buyRiskReport",
+      detail: paid.payment?.transaction
+        ? `Paid x402 on Hedera · ${paid.payment.transaction}`
+        : "Paid x402 on Hedera",
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "x402 payment failed";
+    paidNote = [
+      writeRiskNote({
+        campaignTitle: input.campaignTitle,
+        creatorWallet: input.creatorWallet,
+        lending,
+        accounts,
+        profile,
+      }),
+      `x402 did not settle (${message}). Graph and public-web results above are still live.`,
+    ].join(" ");
+    steps.push({
+      tool: "buyRiskReport",
+      detail: `x402 skipped: ${message}`,
+    });
+  }
 
   let audit: AgentResult["audit"] = null;
   try {
@@ -169,7 +192,7 @@ export async function runDueDiligence(input: {
       creatorWallet: input.creatorWallet,
       note: paidNote,
       profile: profile.profile,
-      x402Tx: paid.payment?.transaction ?? null,
+      x402Tx: payment?.transaction ?? null,
       protocols: lending.map((row) => row.label),
     });
     steps.push({
@@ -210,7 +233,7 @@ export async function runDueDiligence(input: {
     lending,
     accounts,
     profile,
-    payment: paid.payment,
+    payment,
     audit,
     usedLlm: Boolean(llm),
   };

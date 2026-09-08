@@ -28,6 +28,7 @@ type StoredState = {
   pledges: Pledge[];
   approvals: Record<string, PayoutApprovals>;
   hcsTopicId: string | null;
+  x402PayToAccountId: string | null;
 };
 
 const RUNTIME_KEYS = [
@@ -54,7 +55,7 @@ function dataFile() {
 }
 
 function emptyState(): StoredState {
-  return { version: 1, runtime: {}, created: [], pledges: [], approvals: {}, hcsTopicId: null };
+  return { version: 1, runtime: {}, created: [], pledges: [], approvals: {}, hcsTopicId: null, x402PayToAccountId: null };
 }
 
 function catalog(state: StoredState) {
@@ -101,9 +102,15 @@ async function load(): Promise<StoredState> {
             creatorEmail: campaign.creatorEmail ?? null,
           }))
         : [],
-      pledges: Array.isArray(parsed.pledges) ? parsed.pledges : [],
+      pledges: Array.isArray(parsed.pledges)
+        ? parsed.pledges.map((pledge) => ({
+            ...pledge,
+            hederaAccountId: pledge.hederaAccountId ?? null,
+          }))
+        : [],
       approvals: parsed.approvals ?? {},
       hcsTopicId: parsed.hcsTopicId ?? null,
+      x402PayToAccountId: parsed.x402PayToAccountId ?? null,
     };
     cacheMtime = info.mtimeMs;
   } catch {
@@ -282,5 +289,17 @@ export async function setHcsTopicId(topicId: string) {
   return withState((state) => {
     state.hcsTopicId = topicId;
     return topicId;
+  });
+}
+
+export async function getX402PayToAccountId() {
+  const state = await load();
+  return state.x402PayToAccountId;
+}
+
+export async function setX402PayToAccountId(accountId: string) {
+  return withState((state) => {
+    state.x402PayToAccountId = accountId;
+    return accountId;
   });
 }

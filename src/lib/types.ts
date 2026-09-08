@@ -5,6 +5,7 @@ export type Pledge = {
   id: string;
   campaignSlug: string;
   wallet: string;
+  hederaAccountId: string | null;
   amountHbar: number;
   txHash: string | null;
   createdAt: string;

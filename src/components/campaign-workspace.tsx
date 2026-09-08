@@ -118,6 +118,7 @@ export function CampaignWorkspace({ campaign: initial }: { campaign: Campaign })
       </article>
       <aside className="space-y-6 self-start rounded-xl border bg-card p-5 lg:sticky lg:top-16">
         <CheckCreator
+          slug={campaign.slug}
           campaignTitle={campaign.title}
           creatorWallet={campaign.creatorWallet}
           creatorName={campaign.creatorName}

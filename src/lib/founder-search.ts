@@ -88,14 +88,11 @@ function heuristicProfile(
 ) {
   if (sources.length === 0) return null;
   const who = email ? `${name} <${email}>` : name;
-  const hits = sources
-    .map((source, index) => `${index + 1}. ${source.title} — ${source.snippet}`)
-    .join(" ");
+  const titles = sources.map((source) => source.title).join("; ");
   return [
     `Public-web sketch of ${who} for ${title} (${location}).`,
-    `${sources.length} indexed page(s) matched the name${email ? " or email" : ""}; identity is unconfirmed unless a source clearly names the same entity.`,
-    hits,
-    "This is not KYC. Treat thin, generic, or mismatched hits as unknown risk, not a green light.",
+    `${sources.length} indexed page(s) matched the name${email ? " or email" : ""} (${titles}).`,
+    "Identity is unconfirmed unless a cited page clearly names the same entity. This is not KYC. Treat thin or mismatched hits as unknown risk.",
   ].join(" ");
 }
 

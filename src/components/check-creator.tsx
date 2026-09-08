@@ -1,13 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { AgentResult } from "@/lib/types";
 import { usd } from "@/lib/money";
 import { hashscanTopicUrl, hashscanTxUrl } from "@/lib/hedera";
 
+function storageKey(slug: string) {
+  return `zikibols-diligence:${slug}`;
+}
+
 export function CheckCreator({
+  slug,
   campaignTitle,
   creatorWallet,
   creatorName,
@@ -15,6 +20,7 @@ export function CheckCreator({
   location,
   onResult,
 }: {
+  slug: string;
   campaignTitle: string;
   creatorWallet: string;
   creatorName: string;
@@ -25,6 +31,22 @@ export function CheckCreator({
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AgentResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const onResultRef = useRef(onResult);
+  onResultRef.current = onResult;
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(storageKey(slug));
+      if (!raw) return;
+      const saved = JSON.parse(raw) as AgentResult;
+      if (saved?.summary && Array.isArray(saved.steps)) {
+        setResult(saved);
+        onResultRef.current?.(saved);
+      }
+    } catch {
+      sessionStorage.removeItem(storageKey(slug));
+    }
+  }, [slug]);
 
   async function run() {
     setLoading(true);
@@ -47,6 +69,7 @@ export function CheckCreator({
       }
       setResult(json);
       onResult?.(json);
+      sessionStorage.setItem(storageKey(slug), JSON.stringify(json));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Agent failed");
     } finally {
@@ -66,13 +89,13 @@ export function CheckCreator({
         </p>
       </div>
       <Button onClick={run} disabled={loading}>
-        {loading ? "Agent running…" : "Check this creator"}
+        {loading ? "Agent running…" : result ? "Run check again" : "Check this creator"}
       </Button>
       {error ? (
         <p className="text-sm text-destructive">{error}</p>
       ) : null}
       {result ? (
-        <div className="space-y-3 rounded-xl border border-border bg-muted/40 p-4">
+        <div className="space-y-4 rounded-xl border border-border bg-muted/40 p-4">
           <div className="flex flex-wrap gap-2">
             {result.steps.map((step) => (
               <Badge key={step.tool + step.detail} variant="outline">
@@ -81,18 +104,13 @@ export function CheckCreator({
             ))}
             {result.usedLlm ? <Badge>LLM note</Badge> : <Badge variant="secondary">Heuristic note</Badge>}
           </div>
-          <ul className="space-y-1 text-xs text-muted-foreground">
-            {result.steps.map((step) => (
-              <li key={step.tool + step.detail}>{step.detail}</li>
-            ))}
-          </ul>
           <p className="text-sm leading-6">{result.summary}</p>
           {result.profile.profile ? (
             <div className="space-y-2">
               <h3 className="text-sm font-medium">Founder profile</h3>
               <p className="text-sm leading-6">{result.profile.profile}</p>
               {result.profile.sources.length ? (
-                <ul className="space-y-1 text-xs">
+                <ul className="space-y-1 text-xs text-muted-foreground">
                   {result.profile.sources.map((source) => (
                     <li key={source.url}>
                       <a
@@ -103,6 +121,7 @@ export function CheckCreator({
                       >
                         {source.title}
                       </a>
+                      {source.snippet ? ` — ${source.snippet}` : ""}
                     </li>
                   ))}
                 </ul>
@@ -111,42 +130,50 @@ export function CheckCreator({
           ) : result.profile.skipped ? (
             <p className="text-xs text-muted-foreground">{result.profile.skipped}</p>
           ) : null}
-          <ul className="space-y-1 text-xs text-muted-foreground">
-            {result.lending.map((row) => (
-              <li key={row.protocol}>
-                {row.label}: TVL {usd(row.totalValueLockedUSD)} · deposits{" "}
-                {usd(row.totalDepositBalanceUSD)} · borrows {usd(row.totalBorrowBalanceUSD)}
-              </li>
-            ))}
-          </ul>
-          <ul className="space-y-1 text-xs text-muted-foreground">
-            {result.accounts.map((account) => (
-              <li key={account.protocol}>
-                {account.protocol}: {account.openPositionCount} open ·{" "}
-                {account.liquidationCount} liquidations
-                {account.positions.length
-                  ? ` · ${account.positions
-                      .slice(0, 3)
-                      .map((position) => position.symbol)
-                      .join(", ")}`
-                  : ""}
-              </li>
-            ))}
-          </ul>
-          <div className="flex flex-wrap gap-x-4 gap-y-1">
+          <div>
+            <h3 className="text-sm font-medium">Lending books</h3>
+            <ul className="mt-1 space-y-1 text-xs text-muted-foreground">
+              {result.lending.map((row) => (
+                <li key={row.protocol}>
+                  {row.label}: TVL {usd(row.totalValueLockedUSD)} · deposits{" "}
+                  {usd(row.totalDepositBalanceUSD)} · borrows {usd(row.totalBorrowBalanceUSD)}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h3 className="text-sm font-medium">Wallet on Graph</h3>
+            <ul className="mt-1 space-y-1 text-xs text-muted-foreground">
+              {result.accounts.map((account) => (
+                <li key={account.protocol}>
+                  {account.protocol}: {account.openPositionCount} open ·{" "}
+                  {account.liquidationCount} liquidations
+                  {account.positions.length
+                    ? ` · ${account.positions
+                        .slice(0, 3)
+                        .map((position) => position.symbol)
+                        .join(", ")}`
+                    : ""}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-border pt-3">
             {result.payment?.transaction ? (
               <a
-                className="inline-block text-sm text-primary underline-offset-4 hover:underline"
+                className="text-sm font-medium text-primary underline-offset-4 hover:underline"
                 href={hashscanTxUrl(result.payment.transaction)}
                 target="_blank"
                 rel="noreferrer"
               >
                 Hedera payment tx
               </a>
-            ) : null}
+            ) : (
+              <span className="text-xs text-muted-foreground">No x402 payment tx</span>
+            )}
             {result.audit?.topicId ? (
               <a
-                className="inline-block text-sm text-primary underline-offset-4 hover:underline"
+                className="text-sm font-medium text-primary underline-offset-4 hover:underline"
                 href={hashscanTopicUrl(result.audit.topicId)}
                 target="_blank"
                 rel="noreferrer"
@@ -156,7 +183,7 @@ export function CheckCreator({
             ) : null}
             {result.audit?.transactionId ? (
               <a
-                className="inline-block text-sm text-primary underline-offset-4 hover:underline"
+                className="text-sm font-medium text-primary underline-offset-4 hover:underline"
                 href={hashscanTxUrl(result.audit.transactionId)}
                 target="_blank"
                 rel="noreferrer"

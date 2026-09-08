@@ -16,6 +16,11 @@ type Snapshot = {
   payoutReady: boolean;
   operatorConfigured: boolean;
   backerAccountId: string | null;
+  suggestedBacker: {
+    wallet: string;
+    accountId: string | null;
+    txHash: string | null;
+  } | null;
 };
 
 const LIFECYCLE_LABEL: Record<TokenLifecycle, string> = {
@@ -83,7 +88,7 @@ export function TokenPanel({ slug }: { slug: string }) {
     return <p className="text-sm text-muted-foreground">Loading Hedera asset…</p>;
   }
 
-  const { campaign, approvals, payoutReady, operatorConfigured, backerAccountId } = data;
+  const { campaign, approvals, payoutReady, operatorConfigured, backerAccountId, suggestedBacker } = data;
   const lifecycle = campaign.tokenLifecycle;
   const canIssue = lifecycle === "draft" && operatorConfigured;
   const canTransfer = lifecycle === "issued" && Boolean(backerAccountId);
@@ -156,6 +161,45 @@ export function TokenPanel({ slug }: { slug: string }) {
             {busy === "set-backer" ? "Saving…" : "Save backer"}
           </Button>
         </div>
+        {suggestedBacker ? (
+          <p className="text-xs text-muted-foreground">
+            Latest Privy pledger {shortAddress(suggestedBacker.wallet)}
+            {suggestedBacker.accountId
+              ? ` maps to ${suggestedBacker.accountId}`
+              : " is not on the Hedera mirror yet (wait a few seconds after the pledge)"}
+            .
+            {suggestedBacker.accountId && suggestedBacker.accountId !== backerAccountId ? (
+              <>
+                {" "}
+                <button
+                  type="button"
+                  className="text-primary underline-offset-4 hover:underline"
+                  disabled={
+                    Boolean(busy) ||
+                    (lifecycle !== "draft" && lifecycle !== "issued")
+                  }
+                  onClick={() => {
+                    const accountId = suggestedBacker.accountId;
+                    if (!accountId) return;
+                    setBackerDraft(accountId);
+                    post(`/api/campaigns/${slug}/token`, {
+                      action: "set-backer",
+                      accountId,
+                    }).catch(() => undefined);
+                  }}
+                >
+                  Use this account
+                </button>
+              </>
+            ) : null}
+          </p>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Airdrop one share here, then freeze that holder. After a Privy pledge, this
+            desk can map that wallet to a Hedera account. Env HEDERA_BACKER_ACCOUNT_ID
+            still works as a fallback.
+          </p>
+        )}
         {backerAccountId ? (
           <a
             className="inline-block font-mono text-xs text-primary underline-offset-4 hover:underline"
@@ -165,12 +209,7 @@ export function TokenPanel({ slug }: { slug: string }) {
           >
             {backerAccountId} on HashScan
           </a>
-        ) : (
-          <p className="text-xs text-muted-foreground">
-            Airdrop one share here, then freeze that holder. Env
-            HEDERA_BACKER_ACCOUNT_ID still works as a fallback.
-          </p>
-        )}
+        ) : null}
       </div>
       <div className="flex flex-wrap gap-2">
         <Button

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { addPledge, listPledges } from "@/lib/pledges";
 import { loadCampaign } from "@/lib/store";
+import { hederaAccountFromEvm } from "@/lib/hedera";
 
 export async function GET(request: NextRequest) {
   const slug = request.nextUrl.searchParams.get("campaign");
@@ -29,6 +30,7 @@ export async function POST(request: NextRequest) {
   const pledge = await addPledge({
     campaignSlug: body.campaignSlug,
     wallet: body.wallet,
+    hederaAccountId: await hederaAccountFromEvm(body.wallet),
     amountHbar: body.amountHbar,
     txHash: body.txHash ?? null,
   });
