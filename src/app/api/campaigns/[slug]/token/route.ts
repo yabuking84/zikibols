@@ -47,7 +47,7 @@ export async function POST(
       const issued = await issueCampaignToken({
         name: campaign.tokenName,
         symbol: campaign.tokenSymbol,
-        memo: `zikibols ${campaign.assetClass} ${campaign.slug}`,
+        memo: `Zikibols ${campaign.assetClass} ${campaign.slug}`,
         supply: 1000,
       });
       const updated = await patchCampaign(slug, {

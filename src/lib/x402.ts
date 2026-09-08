@@ -1,9 +1,13 @@
-import { HTTPFacilitatorClient, x402ResourceServer } from "@x402/core/server";
+import {
+  HTTPFacilitatorClient,
+  x402ResourceServer,
+  type RouteConfig,
+  type RoutesConfig,
+} from "@x402/core/server";
 import { wrapFetchWithPayment, x402Client, decodePaymentResponseHeader } from "@x402/fetch";
 import { ExactHederaScheme as ExactHederaClientScheme } from "@x402/hedera/exact/client";
 import { ExactHederaScheme as ExactHederaServerScheme } from "@x402/hedera/exact/server";
 import { createClientHederaSigner, PrivateKey } from "@x402/hedera";
-import type { RouteConfig, RoutesConfig } from "@x402/next";
 import {
   BLOCKY402_TESTNET_URL,
   HBAR_ASSET_ID,
@@ -88,11 +92,11 @@ async function resolveX402PayToInner() {
 
   if (!isHederaOperatorConfigured()) {
     throw new Error(
-      "HEDERA_PAY_TO_ACCOUNT must differ from HEDERA_AGENT_ACCOUNT_ID, or set operator/agent keys so zikibols can create a dedicated x402 receiver.",
+      "HEDERA_PAY_TO_ACCOUNT must differ from HEDERA_AGENT_ACCOUNT_ID, or set operator/agent keys so Zikibols can create a dedicated x402 receiver.",
     );
   }
 
-  const created = await createReceiverAccount("zikibols x402 payTo");
+  const created = await createReceiverAccount("Zikibols x402 payTo");
   await setX402PayToAccountId(created.accountId);
   return created.accountId;
 }
@@ -132,7 +136,7 @@ export function getRiskReportRouteConfig(payTo: string): RouteConfig {
   return routeConfig(
     payTo,
     1,
-    "Paid due-diligence risk paragraph for a zikibols campaign",
+    "Paid due-diligence risk paragraph for a Zikibols campaign",
   );
 }
 
@@ -142,12 +146,12 @@ export function getFounderSearchRoutes(payTo: string): RoutesConfig {
     [founderSearchPath(1)]: routeConfig(
       payTo,
       1,
-      "Public-web founder profile for a zikibols campaign (1 query: name)",
+      "Public-web founder profile for a Zikibols campaign (1 query: name)",
     ),
     [founderSearchPath(2)]: routeConfig(
       payTo,
       2,
-      "Public-web founder profile for a zikibols campaign (2 queries: name + email)",
+      "Public-web founder profile for a Zikibols campaign (2 queries: name + email)",
     ),
   };
 }

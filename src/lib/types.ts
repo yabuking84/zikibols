@@ -1,5 +1,6 @@
 import type { CreatorAccount, LendingSnapshot } from "@/lib/graph";
 import type { FounderProfile } from "@/lib/founder-search";
+import type { X402Payment } from "@/lib/x402";
 
 export type Pledge = {
   id: string;
@@ -17,7 +18,7 @@ export type PayoutApprovals = {
 };
 
 export type AgentStep = {
-  tool: "queryLending" | "searchFounder" | "buyRiskReport" | "publishAudit";
+  tool: "queryLending" | "buyFounderProfile" | "buyRiskReport" | "publishAudit";
   detail: string;
 };
 
@@ -27,12 +28,8 @@ export type AgentResult = {
   lending: LendingSnapshot[];
   accounts: CreatorAccount[];
   profile: FounderProfile;
-  payment: {
-    success: boolean;
-    transaction: string;
-    network: string;
-    payer?: string;
-  } | null;
+  /** One entry per x402 service the agent paid for during this check. */
+  payments: X402Payment[];
   audit: {
     topicId: string;
     transactionId: string;

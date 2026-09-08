@@ -21,7 +21,7 @@ async function ensureTopicId() {
 
   const created = await withHederaClient(async (client) => {
     const response = await new TopicCreateTransaction()
-      .setTopicMemo("zikibols paid risk notes")
+      .setTopicMemo("Zikibols paid risk notes")
       .execute(client);
     const receipt = await response.getReceipt(client);
     const topicId = receipt.topicId?.toString();
@@ -38,7 +38,8 @@ export async function publishRiskAudit(input: {
   creatorWallet: string;
   note: string;
   profile: string | null;
-  x402Tx: string | null;
+  /** Settled x402 payments made during this check, keyed by service. */
+  x402: { service: string; transaction: string }[];
   protocols: string[];
 }): Promise<RiskAudit | null> {
   if (!isHederaOperatorConfigured()) return null;
@@ -51,7 +52,7 @@ export async function publishRiskAudit(input: {
     protocols: input.protocols,
     noteSha256: noteDigest(input.note),
     profileSha256: input.profile ? noteDigest(input.profile) : null,
-    x402: input.x402Tx,
+    x402: input.x402,
     at: new Date().toISOString(),
   });
 

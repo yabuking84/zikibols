@@ -11,6 +11,17 @@ function storageKey(slug: string) {
   return `zikibols-diligence:${slug}`;
 }
 
+const PAYMENT_LABEL: Record<AgentResult["payments"][number]["service"], string> = {
+  "founder-search": "Paid founder search",
+  "risk-report": "Paid risk note",
+};
+
+function tinybarsToHbar(tinybars: string) {
+  const n = Number(tinybars);
+  if (!Number.isFinite(n)) return tinybars;
+  return (n / 1e8).toLocaleString("en-US", { maximumFractionDigits: 6 });
+}
+
 export function CheckCreator({
   slug,
   campaignTitle,
@@ -39,7 +50,7 @@ export function CheckCreator({
       const raw = sessionStorage.getItem(storageKey(slug));
       if (!raw) return;
       const saved = JSON.parse(raw) as AgentResult;
-      if (saved?.summary && Array.isArray(saved.steps)) {
+      if (saved?.summary && Array.isArray(saved.steps) && Array.isArray(saved.payments)) {
         setResult(saved);
         onResultRef.current?.(saved);
       }
@@ -82,10 +93,11 @@ export function CheckCreator({
       <div>
         <h2 className="text-base font-medium">Check this creator</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          The agent reads live Aave v3, Compound v3, and Spark Lend, searches the
-          public web for {creatorName}
-          {creatorEmail ? ` and ${creatorEmail}` : ""}, pays Hedera x402 for a
-          written risk note, then hashes that note onto HCS when operator keys are set.
+          The agent reads live Aave v3, Compound v3, and Spark Lend, then pays Hedera
+          x402 twice: once for public-web research on {creatorName}
+          {creatorEmail ? ` and ${creatorEmail}` : ""} (priced per query), once for a
+          written risk note. Both payment ids and the note hash land on HCS when
+          operator keys are set.
         </p>
       </div>
       <Button onClick={run} disabled={loading}>
@@ -159,15 +171,18 @@ export function CheckCreator({
             </ul>
           </div>
           <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-border pt-3">
-            {result.payment?.transaction ? (
-              <a
-                className="text-sm font-medium text-primary underline-offset-4 hover:underline"
-                href={hashscanTxUrl(result.payment.transaction)}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Hedera payment tx
-              </a>
+            {result.payments.length ? (
+              result.payments.map((payment) => (
+                <a
+                  key={payment.transaction}
+                  className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                  href={hashscanTxUrl(payment.transaction)}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {PAYMENT_LABEL[payment.service]} · {tinybarsToHbar(payment.amountTinybars)} ℏ
+                </a>
+              ))
             ) : (
               <span className="text-xs text-muted-foreground">No x402 payment tx</span>
             )}

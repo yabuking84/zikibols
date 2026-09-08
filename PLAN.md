@@ -1,4 +1,4 @@
-# zikibols — project plan
+# Zikibols — project plan
 
 Crowdfunding for **tokenized real-world cashflows**, with an agent that checks the creator on-chain before anyone pledges.
 
@@ -16,13 +16,13 @@ A backer should be able to fund an invoice bond or harvest share without a seed 
 
 The product is one app with three load-bearing sponsor integrations:
 
-| Sponsor | Role in zikibols |
+| Sponsor | Role in Zikibols |
 |---|---|
 | **Privy** | Email/social login → embedded wallet → real HBAR pledge on Hedera testnet |
 | **The Graph** | One Messari lending query against **Aave v3, Compound v3, and Spark Lend**, live; the agent reasons over it |
 | **Hedera** | Agent **pays x402** for a risk note and for founder research; hashes both onto **HCS**; campaigns issue a bond through **Asset Tokenization Studio** with pause/control-list and a 2-of-2 coupon |
 
-zikibols is not a general crowdfunding clone. A founder starts a **campaign** — a diligence-gated listing for **invoice receivables** or **revenue-share** assets. After funding, the token lifecycle is an ATS security (issue → mint to backer → pause / control list → coupon record), not a launchpad.
+Zikibols is not a general crowdfunding clone. A founder starts a **campaign** — a diligence-gated listing for **invoice receivables** or **revenue-share** assets. After funding, the token lifecycle is an ATS security (issue → mint to backer → pause / control list → coupon record), not a launchpad.
 
 Due diligence has two layers:
 
@@ -41,7 +41,7 @@ Crowdfunding a tokenized cashflow today fails in three places:
 2. **Diligence.** "Check the creator" is usually a blog post or a static risk score. Judges (and backers) cannot tell if the data is live.
 3. **The token.** Most hackathon "RWAs" stop at `TokenCreate`. There is no compliance layer, no coupon, no dual control on payout.
 
-zikibols treats those as the product, not polish.
+Zikibols treats those as the product, not polish.
 
 ---
 
@@ -103,7 +103,7 @@ Extra points we target: compliance controls in use (pause, control list), coupon
 
 Lifecycle mapping (if go):
 
-| zikibols step | Today (HTS) | ATS |
+| Zikibols step | Today (HTS) | ATS |
 |---|---|---|
 | Issue | `TokenCreateTransaction` | `Bond.create` (fixed rate; nominal = goal, currency HBAR, maturity = `daysLeft`) → diamond address |
 | Transfer share | `TokenAirdropTransaction` to `0.0.x` via mirror mapping | `Security.issue` 1 unit to the backer's **Privy EVM address** directly (Minter role); no mirror mapping |

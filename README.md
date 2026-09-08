@@ -1,8 +1,8 @@
-# zikibols
+# Zikibols
 
 A backer should be able to fund an invoice bond or harvest share without a seed phrase, without trusting a screenshot of "DeFi history," and without receiving a meme ticker.
 
-zikibols is that product: a crowdfunding app for **tokenized real-world cashflows**, built from scratch for [ETHOnline 2026](https://ethglobal.com/events/ethonline2026). One app, three load-bearing sponsor integrations — Privy for login and the pledge, The Graph for live diligence, Hedera for paid risk notes, an HCS audit trail, and the token lifecycle.
+Zikibols is that product: a crowdfunding app for **tokenized real-world cashflows**, built from scratch for [ETHOnline 2026](https://ethglobal.com/events/ethonline2026). One app, three load-bearing sponsor integrations — Privy for login and the pledge, The Graph for live diligence, Hedera for paid risk notes, an HCS audit trail, and the token lifecycle.
 
 It is not a general crowdfunding clone. A founder starts a **campaign** — a diligence-gated listing for **invoice receivables** or **revenue-share** assets. After funding, the campaign becomes a restricted token with a coupon that needs two people to release.
 

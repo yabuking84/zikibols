@@ -1,6 +1,12 @@
-import { buyRiskReport } from "@/lib/x402";
+import {
+  buyFounderProfile,
+  buyRiskReport,
+  founderSearchQueryCount,
+  isX402ClientConfigured,
+  type X402Payment,
+} from "@/lib/x402";
 import { publishRiskAudit } from "@/lib/hcs";
-import { searchFounder, type FounderProfile } from "@/lib/founder-search";
+import { isSearchConfigured, type FounderProfile } from "@/lib/founder-search";
 import { writeRiskNote } from "@/lib/risk-note";
 import {
   queryStandardizedLending,
@@ -112,6 +118,75 @@ async function llmSummary(
   return json.choices?.[0]?.message?.content?.trim() || null;
 }
 
+function skippedProfile(reason: string): FounderProfile {
+  return { queried: [], sources: [], profile: null, skipped: reason };
+}
+
+function isFounderProfile(value: unknown): value is FounderProfile {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<FounderProfile>;
+  return Array.isArray(candidate.sources) && Array.isArray(candidate.queried);
+}
+
+/**
+ * Founder research is a paid x402 service. Decide locally whether it can run
+ * (Tavily + agent keys) so the agent never pays for a 503, then buy it.
+ */
+async function buyFounderProfileStep(input: {
+  origin: string;
+  campaignTitle: string;
+  creatorName: string;
+  creatorEmail: string | null;
+  location: string;
+}): Promise<{ profile: FounderProfile; payment: X402Payment | null; detail: string }> {
+  if (!input.creatorName.trim()) {
+    return {
+      profile: skippedProfile("No founder name on this campaign"),
+      payment: null,
+      detail: "Skipped: no founder name",
+    };
+  }
+  if (!isSearchConfigured()) {
+    const reason = "Set TAVILY_API_KEY to sell public-web founder research over x402";
+    return { profile: skippedProfile(reason), payment: null, detail: reason };
+  }
+  if (!isX402ClientConfigured()) {
+    const reason =
+      "Founder search is a paid service; set HEDERA_AGENT_ACCOUNT_ID and HEDERA_AGENT_PRIVATE_KEY so the agent can pay for it";
+    return { profile: skippedProfile(reason), payment: null, detail: reason };
+  }
+
+  const queries = founderSearchQueryCount(input.creatorEmail);
+  try {
+    const paid = await buyFounderProfile(input.origin, {
+      creatorName: input.creatorName,
+      creatorEmail: input.creatorEmail,
+      campaignTitle: input.campaignTitle,
+      location: input.location,
+    });
+    const profile = isFounderProfile(paid.report.profile)
+      ? paid.report.profile
+      : skippedProfile("Paid founder-search endpoint returned no profile");
+    const summary = profile.skipped
+      ? profile.skipped
+      : `Public web: ${profile.sources.length} source(s) for ${input.creatorName}`;
+    return {
+      profile,
+      payment: paid.payment,
+      detail: paid.payment?.transaction
+        ? `Paid x402 for ${queries} quer${queries === 1 ? "y" : "ies"} · ${paid.payment.transaction} · ${summary}`
+        : `Paid x402 for ${queries} quer${queries === 1 ? "y" : "ies"} · ${summary}`,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "founder search failed";
+    return {
+      profile: skippedProfile(`Public-web search skipped: ${message}`),
+      payment: null,
+      detail: `x402 founder search skipped: ${message}`,
+    };
+  }
+}
+
 export async function runDueDiligence(input: {
   origin: string;
   campaignTitle: string;
@@ -121,17 +196,15 @@ export async function runDueDiligence(input: {
   location: string;
 }): Promise<AgentResult> {
   const steps: AgentStep[] = [];
+  const payments: X402Payment[] = [];
 
-  const [lendingResult, profile] = await Promise.all([
+  const [lendingResult, founder] = await Promise.all([
     queryStandardizedLending(input.creatorWallet),
-    searchFounder({
-      creatorName: input.creatorName,
-      creatorEmail: input.creatorEmail,
-      campaignTitle: input.campaignTitle,
-      location: input.location,
-    }),
+    buyFounderProfileStep(input),
   ]);
   const { lending, accounts, errors } = lendingResult;
+  const profile = founder.profile;
+  if (founder.payment) payments.push(founder.payment);
 
   steps.push({
     tool: "queryLending",
@@ -139,14 +212,8 @@ export async function runDueDiligence(input: {
       ? `Live Messari lending schema on ${lending.map((row) => row.label).join(" + ")} (${errors.join("; ")})`
       : `Live Messari lending schema on ${lending.map((row) => row.label).join(" + ")}`,
   });
-  steps.push({
-    tool: "searchFounder",
-    detail: profile.skipped
-      ? profile.skipped
-      : `Public web: ${profile.sources.length} source(s) for ${input.creatorName}`,
-  });
+  steps.push({ tool: "buyFounderProfile", detail: founder.detail });
 
-  let payment: AgentResult["payment"] = null;
   let paidNote: string;
   try {
     const paid = await buyRiskReport(input.origin, {
@@ -156,7 +223,7 @@ export async function runDueDiligence(input: {
       accounts,
       profile,
     });
-    payment = paid.payment;
+    if (paid.payment) payments.push(paid.payment);
     paidNote =
       typeof paid.report.note === "string"
         ? paid.report.note
@@ -192,7 +259,10 @@ export async function runDueDiligence(input: {
       creatorWallet: input.creatorWallet,
       note: paidNote,
       profile: profile.profile,
-      x402Tx: payment?.transaction ?? null,
+      x402: payments.map((payment) => ({
+        service: payment.service,
+        transaction: payment.transaction,
+      })),
       protocols: lending.map((row) => row.label),
     });
     steps.push({
@@ -233,7 +303,7 @@ export async function runDueDiligence(input: {
     lending,
     accounts,
     profile,
-    payment,
+    payments,
     audit,
     usedLlm: Boolean(llm),
   };

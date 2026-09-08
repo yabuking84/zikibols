@@ -158,7 +158,7 @@ export async function payCoupon(recipient: string, tinybars = 1000) {
     const response = await new TransferTransaction()
       .addHbarTransfer(treasury, amount.negated())
       .addHbarTransfer(recipient, amount)
-      .setTransactionMemo("zikibols coupon payout")
+      .setTransactionMemo("Zikibols coupon payout")
       .execute(client);
     await response.getReceipt(client);
     return { transactionId: response.transactionId.toString(), recipient };

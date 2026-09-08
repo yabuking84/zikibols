@@ -14,8 +14,8 @@ import {
 const LABELS: { key: keyof Status; label: string; hint: string }[] = [
   { key: "privy", label: "Privy", hint: "Login and embedded wallet pledges" },
   { key: "graph", label: "The Graph", hint: "Live Aave v3 + Compound v3 + Spark" },
-  { key: "search", label: "Founder search", hint: "Public web name + email (Tavily)" },
-  { key: "x402", label: "Hedera x402", hint: "Agent pays for the risk note" },
+  { key: "search", label: "Founder search", hint: "Public web name + email, sold over x402" },
+  { key: "x402", label: "Hedera x402", hint: "Agent pays per query and per risk note" },
   { key: "hts", label: "Hedera HTS", hint: "Issue, airdrop, freeze, coupon" },
 ];
 
