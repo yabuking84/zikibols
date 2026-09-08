@@ -209,7 +209,7 @@ export async function createCampaign(input: CreateCampaignInput) {
     const treasury =
       process.env.NEXT_PUBLIC_CAMPAIGN_TREASURY ||
       seedCampaigns[0]?.treasuryEvm ||
-      "0x0000000000000000000000000000000002e1a9a0";
+      "0x7d5710637321f540b9ee8e1282c598d9b78f4f91";
 
     const campaign: Campaign = {
       ...input,

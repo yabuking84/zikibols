@@ -60,7 +60,7 @@ export const campaigns: Campaign[] = [
     freezeTxId: null,
     payoutTxId: null,
     backerAccountId: null,
-    treasuryEvm: "0x0000000000000000000000000000000002e1a9a0",
+    treasuryEvm: "0x7d5710637321f540b9ee8e1282c598d9b78f4f91",
     imageHue: "32 42% 42%",
   },
   {
@@ -88,7 +88,7 @@ export const campaigns: Campaign[] = [
     freezeTxId: null,
     payoutTxId: null,
     backerAccountId: null,
-    treasuryEvm: "0x0000000000000000000000000000000002e1a9a0",
+    treasuryEvm: "0x7d5710637321f540b9ee8e1282c598d9b78f4f91",
     imageHue: "152 28% 32%",
   },
 ];

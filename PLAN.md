@@ -1,6 +1,6 @@
 # zikibols — project plan
 
-Kickstarter-style crowdfunding for **tokenized real-world cashflows**, with an agent that checks the creator on-chain before anyone pledges.
+Crowdfunding for **tokenized real-world cashflows**, with an agent that checks the creator on-chain before anyone pledges.
 
 Repo: [github.com/yabuking84/zikibols](https://github.com/yabuking84/zikibols)  
 Event: [ETHOnline 2026](https://ethglobal.com/events/ethonline2026) (4–16 Sep 2026)  
@@ -22,7 +22,7 @@ The product is one app with three load-bearing sponsor integrations:
 | **The Graph** | One Messari lending query against **Aave v3, Compound v3, and Spark Lend**, live; the agent reasons over it |
 | **Hedera** | Agent **pays x402** for a risk note and for founder research; hashes both onto **HCS**; campaigns issue a bond through **Asset Tokenization Studio** with pause/control-list and a 2-of-2 coupon |
 
-zikibols is not a general Kickstarter clone. A founder starts a **campaign** — a diligence-gated listing for **invoice receivables** or **revenue-share** assets. After funding, the token lifecycle is an ATS security (issue → mint to backer → pause / control list → coupon record), not a launchpad.
+zikibols is not a general crowdfunding clone. A founder starts a **campaign** — a diligence-gated listing for **invoice receivables** or **revenue-share** assets. After funding, the token lifecycle is an ATS security (issue → mint to backer → pause / control list → coupon record), not a launchpad.
 
 Due diligence has two layers:
 
@@ -362,7 +362,7 @@ The project is a **successful hackathon submission** if all of the following are
 ## Non-goals (this event)
 
 - Mainnet money or a real securities offering
-- A full Kickstarter (comments, rewards tiers, social feed)
+- A full crowdfunding platform (comments, rewards tiers, social feed)
 - Running ATS Mass Payout or a secondary market
 - Mock Graph / mock x402 / mock OSINT fallbacks that look "Ready"
 - Private people-search, leaked credential dumps, or scraping a founder's inbox
