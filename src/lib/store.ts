@@ -79,6 +79,7 @@ function hydrate(seed: Campaign, state: StoredState): Campaign {
   return {
     ...seed,
     ...runtime,
+    creatorEmail: seed.creatorEmail ?? null,
     pledgedHbar: seed.pledgedHbar + mine.reduce((sum, pledge) => sum + pledge.amountHbar, 0),
     backers: seed.backers + mine.length,
   };

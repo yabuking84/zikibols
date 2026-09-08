@@ -44,4 +44,3 @@ export function writeRiskNote(input: {
     .filter(Boolean)
     .join(" ");
 }
-}

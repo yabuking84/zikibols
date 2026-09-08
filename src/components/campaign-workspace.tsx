@@ -81,6 +81,10 @@ export function CampaignWorkspace({ campaign: initial }: { campaign: Campaign })
         <section className="space-y-3">
           <h2 className="text-base font-medium">Story</h2>
           <p className="leading-7 text-pretty">{campaign.story}</p>
+          <p className="text-sm text-muted-foreground">
+            {campaign.creatorName}
+            {campaign.creatorEmail ? ` · ${campaign.creatorEmail}` : ""}
+          </p>
           <a
             className="inline-block text-sm text-primary underline-offset-4 hover:underline"
             href={`https://etherscan.io/address/${campaign.creatorWallet}`}
@@ -116,6 +120,9 @@ export function CampaignWorkspace({ campaign: initial }: { campaign: Campaign })
         <CheckCreator
           campaignTitle={campaign.title}
           creatorWallet={campaign.creatorWallet}
+          creatorName={campaign.creatorName}
+          creatorEmail={campaign.creatorEmail}
+          location={campaign.location}
           onResult={setDiligence}
         />
         <Separator />

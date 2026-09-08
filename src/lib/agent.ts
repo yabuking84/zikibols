@@ -1,13 +1,12 @@
 import { buyRiskReport } from "@/lib/x402";
 import { publishRiskAudit } from "@/lib/hcs";
-import { searchFounder } from "@/lib/founder-search";
+import { searchFounder, type FounderProfile } from "@/lib/founder-search";
 import {
   queryStandardizedLending,
   type CreatorAccount,
   type LendingSnapshot,
 } from "@/lib/graph";
 import type { AgentResult, AgentStep } from "@/lib/types";
-import type { FounderProfile } from "@/lib/founder-search";
 
 export type { AgentResult, AgentStep };
 

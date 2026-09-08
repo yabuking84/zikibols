@@ -1,3 +1,5 @@
+import { isPublicEmail } from "@/lib/campaigns";
+
 export type FounderSource = {
   title: string;
   url: string;
@@ -145,7 +147,8 @@ export async function searchFounder(input: {
   location: string;
 }): Promise<FounderProfile> {
   const name = input.creatorName.trim();
-  const email = input.creatorEmail?.trim() || null;
+  const emailRaw = input.creatorEmail?.trim() || null;
+  const email = emailRaw && isPublicEmail(emailRaw) ? emailRaw.toLowerCase() : null;
   if (!name) {
     return skipped("No founder name on this campaign");
   }

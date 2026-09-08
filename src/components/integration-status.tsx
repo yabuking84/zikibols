@@ -14,6 +14,7 @@ import {
 const LABELS: { key: keyof Status; label: string; hint: string }[] = [
   { key: "privy", label: "Privy", hint: "Login and embedded wallet pledges" },
   { key: "graph", label: "The Graph", hint: "Live Aave v3 + Compound v3 + Spark" },
+  { key: "search", label: "Founder search", hint: "Public web name + email (Tavily)" },
   { key: "x402", label: "Hedera x402", hint: "Agent pays for the risk note" },
   { key: "hts", label: "Hedera HTS", hint: "Issue, airdrop, freeze, coupon" },
 ];
@@ -29,7 +30,7 @@ export function IntegrationStatus() {
   }, []);
 
   return (
-    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
       {LABELS.map((item) => {
         const live = status?.[item.key];
         return (

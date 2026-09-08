@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runDueDiligence } from "@/lib/agent";
+import { isPublicEmail } from "@/lib/campaigns";
 
 function originFrom(request: NextRequest) {
   const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
@@ -30,7 +31,10 @@ export async function POST(request: NextRequest) {
       campaignTitle: body.campaignTitle,
       creatorWallet: body.creatorWallet,
       creatorName: body.creatorName?.trim() || "Unknown creator",
-      creatorEmail: body.creatorEmail?.trim() || null,
+      creatorEmail:
+        body.creatorEmail && isPublicEmail(body.creatorEmail)
+          ? body.creatorEmail.trim().toLowerCase()
+          : null,
       location: body.location?.trim() || "",
     });
 

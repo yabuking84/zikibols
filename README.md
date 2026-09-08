@@ -1,14 +1,23 @@
 # zikibols
 
-zikibols is a Kickstarter-style app for **tokenized cashflows** — things like an invoice bond or a harvest revenue share — built for [ETHOnline 2026](https://ethglobal.com/events/ethonline2026).
+A backer should be able to fund an invoice bond or harvest share without a seed phrase, without trusting a screenshot of “DeFi history,” and without receiving a meme ticker.
+
+zikibols is that product: a Kickstarter-style app for **tokenized real-world cashflows**, built for [ETHOnline 2026](https://ethglobal.com/events/ethonline2026). One app, three load-bearing sponsor integrations — Privy for login and the pledge, The Graph for live diligence, Hedera for paid risk notes, HCS audit, and the HTS token lifecycle.
+
+It is not a general crowdfunding clone. A founder starts a **campaign** — a diligence-gated listing for **invoice receivables** or **revenue-share** assets. After funding, the token lifecycle looks like Asset Tokenization Studio (issue → transfer → freeze/pause → coupon), not a launchpad.
+
+Due diligence has two layers:
+
+1. **The campaign (free).** When a founder starts a campaign they publish the story, creator **name**, optional **email**, and Ethereum wallet. That is the public brief anyone can read without paying.
+2. **Paid due diligence.** Before pledging, a backer can **Check this creator**. The agent queries live DeFi books, then **pays** for independent public-web research on that name and email, folds a sourced profile into an x402 risk note, and hashes it onto HCS.
 
 A backer can:
 
-1. **Check the creator** against live DeFi data before sending money
+1. Read the **campaign**, then **Check the creator** (paid Graph + founder research) before sending money
 2. **Pledge HBAR** after logging in with email or social (no seed phrase)
-3. See the raise turn into a **restricted Hedera token**, then a **coupon** that needs two people to release
+3. See the campaign turn into a **restricted Hedera token**, then a **coupon** that needs two people to release
 
-It is not a general crowdfunding clone. Two demo campaigns ship with the app; you can also **Start a campaign**. Diligence is paid on-chain, and the token can be frozen. Missing keys fail on purpose — the dashboard never invents Graph or payment data.
+Two demo campaigns ship with the app; you can also **Start a campaign**. Paid diligence settles on-chain, and the token can be frozen. Missing keys fail on purpose — the dashboard never invents Graph, payment, or founder-search data.
 
 Hackathon prize mapping and remaining work: [PLAN.md](./PLAN.md).
 
@@ -20,6 +29,7 @@ Hackathon prize mapping and remaining work: [PLAN.md](./PLAN.md).
 |---|---|
 | **Privy** | Log in with email or social. You get an embedded wallet and pledge real HBAR on Hedera testnet. |
 | **The Graph** | One lending query against **Aave v3**, **Compound v3**, and **Spark Lend**. Same schema, three books. |
+| **Founder search** | Paid public-web profile from the **campaign’s** founder **name** and optional **email** (Tavily). Missing key skips the profile; it does not invent one. |
 | **Hedera** | The agent **pays** for a written risk note (x402), then hashes it onto **HCS**. Operators issue an HTS bond/share, freeze it, then pay a coupon after a 2-of-2 sign-off. |
 
 Two seed campaigns ship with the app:
@@ -70,7 +80,15 @@ Without Privy, you can still browse campaigns. You cannot log in or pledge.
 
 Without this key, **Check this creator** fails on purpose. There is no fake Graph fallback. The same Messari query hits Aave v3, Compound v3, and Spark Lend; one book failing still returns the others.
 
-### 3. Hedera x402 — the agent pays for the risk note
+### 3. Founder search — public-web profile (optional)
+
+| Variable | Where to get it |
+|---|---|
+| `TAVILY_API_KEY` | [Tavily](https://tavily.com) search key. |
+
+The agent searches the public web for the campaign’s founder **name** and optional **email**, then compiles a sourced profile. No key (or zero hits) → the Check this creator step is labeled skipped. There is no fake biography.
+
+### 4. Hedera x402 — the agent pays for the risk note
 
 Create a funded Hedera **testnet** account at the [Hedera portal](https://portal.hedera.com/) (use the faucet).
 
@@ -83,7 +101,7 @@ Create a funded Hedera **testnet** account at the [Hedera portal](https://portal
 
 The agent calls `POST /api/risk-report`. That endpoint is paywalled: no payment, no note. After a successful check you get a HashScan link.
 
-### 4. Hedera HTS — issue, airdrop, freeze, coupon
+### 5. Hedera HTS — issue, airdrop, freeze, coupon
 
 These power the **Operator desk**.
 
@@ -94,11 +112,11 @@ These power the **Operator desk**.
 
 Fund the operator (or agent) account on testnet. Issuing a token and paying a coupon spends HBAR.
 
-### 5. Optional
+### 6. Optional
 
 | Variable | What it does |
 |---|---|
-| `OPENAI_API_KEY` | Rewrites the risk note with an LLM. If missing, the agent still queries Graph, still pays x402, and writes a **heuristic** note (labeled in the UI). |
+| `OPENAI_API_KEY` | Rewrites the risk note and founder profile with an LLM. If missing, the agent still queries Graph, still pays x402, and writes a **heuristic** note (labeled in the UI). |
 | `OPENAI_MODEL` | Defaults to `gpt-4o-mini` if you set a key. |
 | `ZIKIBOLS_DATA_PATH` | Where pledges, token ids, HCS topic id, and 2-of-2 approvals are saved. Default: `.data/state.json`. |
 | `HEDERA_HCS_TOPIC_ID` | Optional. Reuse an existing consensus topic for paid-note hashes. If unset, the first Check this creator with operator keys creates one. |
@@ -120,7 +138,7 @@ You will see:
 
 - Campaign stats (how many raises, total pledged)
 - **How a backer funds** (three steps)
-- **Integrations** — Privy / The Graph / Hedera x402 / Hedera HTS, each Ready or Needs env
+- **Integrations** — Privy / The Graph / Founder search / Hedera x402 / Hedera HTS, each Ready or Needs env
 - The two campaign cards, plus **Start a campaign**
 - Recent pledges
 
@@ -132,9 +150,10 @@ Use **⌘K** (or **Ctrl+K**) to search campaigns. Log in from the sidebar. Theme
 2. Read the story and the progress bar.
 3. Click **Check this creator**. Wait while the agent:
    - queries Aave v3, Compound v3, and Spark Lend (one Messari schema)
+   - searches the public web for the founder name (and email if the campaign has one)
    - pays for a risk note on Hedera
    - hashes that note onto HCS when operator keys are set
-   - shows TVL, positions, a written summary, HashScan payment, and HCS links
+   - shows TVL, positions, a founder profile with source links (or a skipped label), HashScan payment, and HCS links
 4. Log in with Privy (email or social). An embedded wallet is created for you.
 5. Fund that wallet with **Hedera testnet HBAR** if it is empty (Privy + [Hedera faucet](https://portal.hedera.com/)).
 6. Choose an amount (10 / 50 / 100 ℏ, or type your own) and click **Pledge with Privy wallet**.
@@ -168,7 +187,8 @@ Coupon size is a lifecycle proof (tinybars), not a real yield calculation.
 |---|---|---|
 | **On-chain (Hedera testnet)** | Yes | Privy HBAR pledges, x402 risk-note payment, HCS topic messages, HTS issue / airdrop / freeze / coupon. [HashScan](https://hashscan.io/testnet) is the source of truth. |
 | **The Graph** | Live query | Aave v3 + Compound v3 + Spark Lend via the Graph Gateway. One book failing does not kill Check this creator. No key → Check this creator fails. |
-| **HCS audit** | Yes, on disk + chain | Topic id in `.data/state.json` or `HEDERA_HCS_TOPIC_ID`. Message is a SHA-256 of the paid note, not the full paragraph. Skip if operator keys are missing. |
+| **Founder search** | Live query | Tavily public-web snippets for founder name + optional email. No key → profile step skipped, Check this creator still runs. |
+| **HCS audit** | Yes, on disk + chain | Topic id in `.data/state.json` or `HEDERA_HCS_TOPIC_ID`. Message is SHA-256 of the paid note and founder profile, not the full paragraph. Skip if operator keys are missing. |
 | **Campaign book** | Yes, on disk | Pledges, created campaigns, token ids, backer account, and 2-of-2 approvals in `.data/state.json` (or `ZIKIBOLS_DATA_PATH`). Lost only if you delete that file. On a read-only host this falls back to process memory. |
 | **Seed copy** | In git | Harbor Credit and Northwind Farms text, goals, and starting pledged totals in `src/lib/campaigns.ts`. |
 
@@ -182,6 +202,7 @@ Check **Integrations** on the dashboard first.
 |---|---|
 | Pledge says add `NEXT_PUBLIC_PRIVY_APP_ID` | Privy app id missing. Restart after editing `.env.local`. |
 | **Check this creator** errors | `THEGRAPH_API_KEY` missing or invalid, or every lending book failed. |
+| Check runs but founder profile is skipped | Expected without `TAVILY_API_KEY`, or no public-web hits. Diligence still succeeds. |
 | Check runs Graph but HCS link is missing | Expected without operator/agent Hedera keys. Diligence still succeeds. |
 | Check runs Graph but fails on the paid note | x402 env incomplete, or the agent account has no testnet HBAR. |
 | **Issue token** stays disabled | Operator/agent Hedera keys missing, or the token is already issued. |
@@ -201,14 +222,15 @@ Backer UI                    Agent                         Hedera testnet
 ─────────                    ─────                         ──────────────
 Campaign page ──POST /api/agent──► query Aave+Compound+Spark Graph Gateway
                                  │  (same Messari query; one book can fail)
+                                 ├── searchFounder ──Tavily──► public-web snippets
                                  ▼
                               buyRiskReport ──x402──► POST /api/risk-report
                                  │                     (Blocky402 settle)
                                  ▼
-                              heuristic or LLM note
+                              heuristic or LLM note + founder profile
                                  │
                                  ▼
-                              publishAudit ──HCS──► topic message (note hash)
+                              publishAudit ──HCS──► topic message (note + profile hash)
 
 Privy wallet ──HBAR tx──► campaign treasury (EVM 296)
          └──POST /api/pledges──► .data/state.json + pledgedHbar
@@ -223,6 +245,7 @@ Operator desk (`/campaigns/[slug]/operate`)
 | Campaign fixtures | `src/lib/campaigns.ts` |
 | Persisted book | `src/lib/store.ts` |
 | Graph lending query | `src/lib/graph.ts` |
+| Founder web search | `src/lib/founder-search.ts` |
 | Agent tool loop | `src/lib/agent.ts`, `src/app/api/agent/route.ts` |
 | HCS paid-note hash | `src/lib/hcs.ts` |
 | Paid risk note | `src/app/api/risk-report/route.ts` |

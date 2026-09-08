@@ -10,10 +10,16 @@ import { hashscanTopicUrl, hashscanTxUrl } from "@/lib/hedera";
 export function CheckCreator({
   campaignTitle,
   creatorWallet,
+  creatorName,
+  creatorEmail,
+  location,
   onResult,
 }: {
   campaignTitle: string;
   creatorWallet: string;
+  creatorName: string;
+  creatorEmail: string | null;
+  location: string;
   onResult?: (result: AgentResult) => void;
 }) {
   const [loading, setLoading] = useState(false);
@@ -27,7 +33,13 @@ export function CheckCreator({
       const response = await fetch("/api/agent", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ campaignTitle, creatorWallet }),
+        body: JSON.stringify({
+          campaignTitle,
+          creatorWallet,
+          creatorName,
+          creatorEmail,
+          location,
+        }),
       });
       const json = (await response.json()) as AgentResult & { error?: string };
       if (!response.ok) {
@@ -47,9 +59,10 @@ export function CheckCreator({
       <div>
         <h2 className="text-base font-medium">Check this creator</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          The agent reads live Aave v3, Compound v3, and Spark Lend with the same
-          Messari lending schema, pays Hedera x402 for a written risk note, then
-          hashes that note onto HCS when operator keys are set.
+          The agent reads live Aave v3, Compound v3, and Spark Lend, searches the
+          public web for {creatorName}
+          {creatorEmail ? ` and ${creatorEmail}` : ""}, pays Hedera x402 for a
+          written risk note, then hashes that note onto HCS when operator keys are set.
         </p>
       </div>
       <Button onClick={run} disabled={loading}>
@@ -74,6 +87,30 @@ export function CheckCreator({
             ))}
           </ul>
           <p className="text-sm leading-6">{result.summary}</p>
+          {result.profile.profile ? (
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium">Founder profile</h3>
+              <p className="text-sm leading-6">{result.profile.profile}</p>
+              {result.profile.sources.length ? (
+                <ul className="space-y-1 text-xs">
+                  {result.profile.sources.map((source) => (
+                    <li key={source.url}>
+                      <a
+                        className="text-primary underline-offset-4 hover:underline"
+                        href={source.url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {source.title}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          ) : result.profile.skipped ? (
+            <p className="text-xs text-muted-foreground">{result.profile.skipped}</p>
+          ) : null}
           <ul className="space-y-1 text-xs text-muted-foreground">
             {result.lending.map((row) => (
               <li key={row.protocol}>

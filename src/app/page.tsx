@@ -19,7 +19,7 @@ import { hbar } from "@/lib/money";
 const steps = [
   {
     title: "Check the creator",
-    body: "The agent reads live Aave v3, Compound v3, and Spark Lend with the same Messari lending query, pays Hedera x402 for a written risk note, then hashes that note onto HCS.",
+    body: "The agent reads live Aave v3, Compound v3, and Spark Lend, searches the public web for the founder’s name and email, pays Hedera x402 for a written risk note, then hashes that note onto HCS.",
   },
   {
     title: "Pledge with Privy",

@@ -19,6 +19,7 @@ export function CreateCampaignForm() {
   const [title, setTitle] = useState("");
   const [creatorName, setCreatorName] = useState("");
   const [creatorWallet, setCreatorWallet] = useState("");
+  const [creatorEmail, setCreatorEmail] = useState("");
   const [location, setLocation] = useState("");
   const [goalHbar, setGoalHbar] = useState("5000");
   const [daysLeft, setDaysLeft] = useState("21");
@@ -41,6 +42,7 @@ export function CreateCampaignForm() {
           title,
           creatorName,
           creatorWallet,
+          creatorEmail: creatorEmail.trim() || null,
           location,
           goalHbar: Number(goalHbar),
           daysLeft: Number(daysLeft),
@@ -116,6 +118,16 @@ export function CreateCampaignForm() {
           />
         </div>
         <div className="space-y-1.5">
+          <Label htmlFor="campaign-email">Public creator email (optional)</Label>
+          <Input
+            id="campaign-email"
+            type="email"
+            value={creatorEmail}
+            onChange={(event) => setCreatorEmail(event.target.value)}
+            placeholder="desk@example.com"
+          />
+        </div>
+        <div className="space-y-1.5">
           <Label htmlFor="campaign-location">Location</Label>
           <Input
             id="campaign-location"
@@ -186,7 +198,9 @@ export function CreateCampaignForm() {
       </div>
       <p className="text-xs text-muted-foreground">
         The creator wallet is the Ethereum address The Graph looks up on Aave v3,
-        Compound v3, and Spark Lend. The raise still settles in HBAR on Hedera testnet.
+        Compound v3, and Spark Lend. Optional email is a public search query for the
+        paid founder profile — not a mailbox to scrape. The raise still settles in
+        HBAR on Hedera testnet.
       </p>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
       <Button type="submit" disabled={busy}>
