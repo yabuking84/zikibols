@@ -6,7 +6,8 @@ import {
   getPayoutApprovals,
   payoutReady,
 } from "@/lib/payouts";
-import { getBackerAccountId, payCoupon } from "@/lib/hts";
+import { getBackerAccountId } from "@/lib/hts";
+import { payCouponToBacker, setCouponRecord, unpauseBond } from "@/lib/ats";
 
 export async function POST(
   request: NextRequest,
@@ -43,7 +44,7 @@ export async function POST(
     if (body.action === "release") {
       if (campaign.tokenLifecycle !== "frozen") {
         return NextResponse.json(
-          { error: "Freeze or pause the token before releasing the coupon." },
+          { error: "Pause the bond before releasing the coupon." },
           { status: 400 },
         );
       }
@@ -63,16 +64,28 @@ export async function POST(
         "";
       if (!recipient) {
         return NextResponse.json(
-          { error: "Set HEDERA_BACKER_ACCOUNT_ID or HEDERA_PAY_TO_ACCOUNT for the coupon." },
+          { error: "Set a backer address or HEDERA_PAY_TO_ACCOUNT for the coupon." },
           { status: 400 },
         );
       }
-      const paid = await payCoupon(recipient);
+      if (!campaign.tokenId) {
+        return NextResponse.json({ error: "Issue the ATS bond first" }, { status: 400 });
+      }
+
+      try {
+        await unpauseBond(campaign.tokenId);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "";
+        if (!/not paused|already unpaused|Pausable/i.test(message)) throw error;
+      }
+      const couponRecord = await setCouponRecord(campaign.tokenId);
+      const paid = await payCouponToBacker(recipient);
       const updated = await patchCampaign(slug, {
         tokenLifecycle: "paid",
         payoutTxId: paid.transactionId,
+        couponTxId: couponRecord.transactionId,
       });
-      return NextResponse.json({ campaign: updated, ...paid });
+      return NextResponse.json({ campaign: updated, ...paid, coupon: couponRecord });
     }
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });

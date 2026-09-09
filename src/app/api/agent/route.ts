@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runDueDiligence } from "@/lib/agent";
+import { isPublicEmail } from "@/lib/campaigns";
 
 function originFrom(request: NextRequest) {
   const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
@@ -13,6 +14,9 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as {
       campaignTitle?: string;
       creatorWallet?: string;
+      creatorName?: string;
+      creatorEmail?: string | null;
+      location?: string;
     };
 
     if (!body.campaignTitle || !body.creatorWallet) {
@@ -26,6 +30,12 @@ export async function POST(request: NextRequest) {
       origin: originFrom(request),
       campaignTitle: body.campaignTitle,
       creatorWallet: body.creatorWallet,
+      creatorName: body.creatorName?.trim() || "Unknown creator",
+      creatorEmail:
+        body.creatorEmail && isPublicEmail(body.creatorEmail)
+          ? body.creatorEmail.trim().toLowerCase()
+          : null,
+      location: body.location?.trim() || "",
     });
 
     return NextResponse.json(result);

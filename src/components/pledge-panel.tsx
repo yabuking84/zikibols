@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import type { Campaign } from "@/lib/campaigns";
 import type { Pledge } from "@/lib/types";
 import { hbar, shortAddress } from "@/lib/money";
-import { hederaTestnet, hashscanTxUrl } from "@/lib/hedera";
+import { hederaTestnet, hashscanAccountUrl, hashscanTxUrl } from "@/lib/hedera";
 
 const PRESETS = [10, 50, 100];
 
@@ -219,11 +219,38 @@ function PledgeForm({
         </a>
       ) : null}
       {mine.length > 0 ? (
-        <div className="border-t border-border pt-3 text-sm">
+        <div className="space-y-2 border-t border-border pt-3 text-sm">
           <p className="font-medium">Your pledges</p>
           <p className="text-muted-foreground">
             {mine.length} from {shortAddress(wallet?.address ?? "")} · {hbar(mineTotal)}
           </p>
+          <ul className="space-y-1 text-xs text-muted-foreground">
+            {mine.slice(0, 4).map((pledge) => (
+              <li key={pledge.id} className="flex flex-wrap gap-x-3 gap-y-1">
+                <span>{hbar(pledge.amountHbar)}</span>
+                {pledge.hederaAccountId ? (
+                  <a
+                    className="font-mono text-primary underline-offset-4 hover:underline"
+                    href={hashscanAccountUrl(pledge.hederaAccountId)}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {pledge.hederaAccountId}
+                  </a>
+                ) : null}
+                {pledge.txHash ? (
+                  <a
+                    className="text-primary underline-offset-4 hover:underline"
+                    href={hashscanTxUrl(pledge.txHash)}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    HashScan
+                  </a>
+                ) : null}
+              </li>
+            ))}
+          </ul>
         </div>
       ) : null}
     </div>

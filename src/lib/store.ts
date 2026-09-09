@@ -18,6 +18,7 @@ export type CampaignRuntime = {
   transferTxId: string | null;
   freezeTxId: string | null;
   payoutTxId: string | null;
+  couponTxId: string | null;
   backerAccountId: string | null;
 };
 
@@ -27,6 +28,8 @@ type StoredState = {
   created: Campaign[];
   pledges: Pledge[];
   approvals: Record<string, PayoutApprovals>;
+  hcsTopicId: string | null;
+  x402PayToAccountId: string | null;
 };
 
 const RUNTIME_KEYS = [
@@ -36,6 +39,7 @@ const RUNTIME_KEYS = [
   "transferTxId",
   "freezeTxId",
   "payoutTxId",
+  "couponTxId",
   "backerAccountId",
 ] as const;
 
@@ -53,7 +57,7 @@ function dataFile() {
 }
 
 function emptyState(): StoredState {
-  return { version: 1, runtime: {}, created: [], pledges: [], approvals: {} };
+  return { version: 1, runtime: {}, created: [], pledges: [], approvals: {}, hcsTopicId: null, x402PayToAccountId: null };
 }
 
 function catalog(state: StoredState) {
@@ -68,6 +72,7 @@ function runtimeFrom(seed: Campaign): CampaignRuntime {
     transferTxId: seed.transferTxId,
     freezeTxId: seed.freezeTxId,
     payoutTxId: seed.payoutTxId,
+    couponTxId: seed.couponTxId ?? null,
     backerAccountId: seed.backerAccountId,
   };
 }
@@ -78,6 +83,7 @@ function hydrate(seed: Campaign, state: StoredState): Campaign {
   return {
     ...seed,
     ...runtime,
+    creatorEmail: seed.creatorEmail ?? null,
     pledgedHbar: seed.pledgedHbar + mine.reduce((sum, pledge) => sum + pledge.amountHbar, 0),
     backers: seed.backers + mine.length,
   };
@@ -93,9 +99,21 @@ async function load(): Promise<StoredState> {
     cache = {
       version: 1,
       runtime: parsed.runtime ?? {},
-      created: Array.isArray(parsed.created) ? parsed.created : [],
-      pledges: Array.isArray(parsed.pledges) ? parsed.pledges : [],
+      created: Array.isArray(parsed.created)
+        ? parsed.created.map((campaign) => ({
+            ...campaign,
+            creatorEmail: campaign.creatorEmail ?? null,
+          }))
+        : [],
+      pledges: Array.isArray(parsed.pledges)
+        ? parsed.pledges.map((pledge) => ({
+            ...pledge,
+            hederaAccountId: pledge.hederaAccountId ?? null,
+          }))
+        : [],
       approvals: parsed.approvals ?? {},
+      hcsTopicId: parsed.hcsTopicId ?? null,
+      x402PayToAccountId: parsed.x402PayToAccountId ?? null,
     };
     cacheMtime = info.mtimeMs;
   } catch {
@@ -169,6 +187,7 @@ export type CreateCampaignInput = {
   story: string;
   creatorName: string;
   creatorWallet: `0x${string}`;
+  creatorEmail: string | null;
   goalHbar: number;
   daysLeft: number;
   location: string;
@@ -193,7 +212,7 @@ export async function createCampaign(input: CreateCampaignInput) {
     const treasury =
       process.env.NEXT_PUBLIC_CAMPAIGN_TREASURY ||
       seedCampaigns[0]?.treasuryEvm ||
-      "0x0000000000000000000000000000000002e1a9a0";
+      "0x7d5710637321f540b9ee8e1282c598d9b78f4f91";
 
     const campaign: Campaign = {
       ...input,
@@ -206,6 +225,7 @@ export async function createCampaign(input: CreateCampaignInput) {
       transferTxId: null,
       freezeTxId: null,
       payoutTxId: null,
+      couponTxId: null,
       backerAccountId: null,
       treasuryEvm: treasury as `0x${string}`,
       imageHue: input.assetClass === "invoice-receivable" ? "32 42% 42%" : "152 28% 32%",
@@ -260,4 +280,30 @@ export async function approveOperator(slug: string) {
 export async function payoutReady(slug: string) {
   const current = await getPayoutApprovals(slug);
   return Boolean(current.founderWallet && current.operator);
+}
+
+export async function getHcsTopicId() {
+  const fromEnv = process.env.HEDERA_HCS_TOPIC_ID?.trim();
+  if (fromEnv) return fromEnv;
+  const state = await load();
+  return state.hcsTopicId;
+}
+
+export async function setHcsTopicId(topicId: string) {
+  return withState((state) => {
+    state.hcsTopicId = topicId;
+    return topicId;
+  });
+}
+
+export async function getX402PayToAccountId() {
+  const state = await load();
+  return state.x402PayToAccountId;
+}
+
+export async function setX402PayToAccountId(accountId: string) {
+  return withState((state) => {
+    state.x402PayToAccountId = accountId;
+    return accountId;
+  });
 }

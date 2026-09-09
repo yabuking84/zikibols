@@ -25,10 +25,43 @@ export function hashscanTokenUrl(tokenId: string) {
   return `https://hashscan.io/testnet/token/${tokenId}`;
 }
 
+export function hashscanContractUrl(id: string) {
+  return `https://hashscan.io/testnet/contract/${id}`;
+}
+
 export function hashscanTxUrl(txId: string) {
-  return `https://hashscan.io/testnet/transaction/${encodeURIComponent(txId)}`;
+  const trimmed = txId.trim();
+  const hedera = trimmed.match(/^(\d+\.\d+\.\d+)@(\d+)\.(\d+)$/);
+  const path = hedera ? `${hedera[1]}-${hedera[2]}-${hedera[3]}` : trimmed;
+  return `https://hashscan.io/testnet/transaction/${encodeURIComponent(path)}`;
+}
+
+export function hashscanTopicUrl(topicId: string) {
+  return `https://hashscan.io/testnet/topic/${topicId}`;
 }
 
 export function isHederaAccountId(value: string) {
   return /^\d+\.\d+\.\d+$/.test(value.trim());
+}
+
+export function isEvmAddress(value: string) {
+  return /^0x[a-fA-F0-9]{40}$/.test(value.trim());
+}
+
+/** Privy wallets are EVM 0x…; HTS airdrop needs 0.0.x. Mirror node is public. */
+export async function hederaAccountFromEvm(evmAddress: string) {
+  const address = evmAddress.trim().toLowerCase();
+  if (!isEvmAddress(address)) return null;
+  try {
+    const response = await fetch(
+      `https://testnet.mirrornode.hedera.com/api/v1/accounts/${address}`,
+      { cache: "no-store", signal: AbortSignal.timeout(8_000) },
+    );
+    if (!response.ok) return null;
+    const json = (await response.json()) as { account?: string };
+    const account = json.account?.trim() ?? "";
+    return isHederaAccountId(account) ? account : null;
+  } catch {
+    return null;
+  }
 }

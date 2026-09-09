@@ -67,7 +67,7 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
           <Shield className="size-4" />
         </div>
         <div className="leading-tight">
-          <p className="text-sm font-semibold">zikibols</p>
+          <p className="text-sm font-semibold">Zikibols</p>
           <p className="text-xs text-muted-foreground">Backers & desk</p>
         </div>
       </div>

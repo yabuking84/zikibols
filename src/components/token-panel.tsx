@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Campaign, TokenLifecycle } from "@/lib/campaigns";
-import { hashscanAccountUrl, hashscanTokenUrl, hashscanTxUrl } from "@/lib/hedera";
+import { hashscanAccountUrl, hashscanContractUrl, hashscanTxUrl } from "@/lib/hedera";
 import { shortAddress } from "@/lib/money";
 
 type Snapshot = {
@@ -16,13 +16,18 @@ type Snapshot = {
   payoutReady: boolean;
   operatorConfigured: boolean;
   backerAccountId: string | null;
+  suggestedBacker: {
+    wallet: string;
+    accountId: string | null;
+    txHash: string | null;
+  } | null;
 };
 
 const LIFECYCLE_LABEL: Record<TokenLifecycle, string> = {
   draft: "Draft",
   issued: "Issued",
   transferred: "Transferred",
-  frozen: "Frozen / paused",
+  frozen: "Paused",
   paid: "Coupon paid",
 };
 
@@ -80,10 +85,10 @@ export function TokenPanel({ slug }: { slug: string }) {
   }
 
   if (!data) {
-    return <p className="text-sm text-muted-foreground">Loading Hedera asset…</p>;
+    return <p className="text-sm text-muted-foreground">Loading ATS bond…</p>;
   }
 
-  const { campaign, approvals, payoutReady, operatorConfigured, backerAccountId } = data;
+  const { campaign, approvals, payoutReady, operatorConfigured, backerAccountId, suggestedBacker } = data;
   const lifecycle = campaign.tokenLifecycle;
   const canIssue = lifecycle === "draft" && operatorConfigured;
   const canTransfer = lifecycle === "issued" && Boolean(backerAccountId);
@@ -93,13 +98,13 @@ export function TokenPanel({ slug }: { slug: string }) {
   const canRelease = payoutReady && lifecycle === "frozen";
   const nextStep =
     lifecycle === "draft"
-      ? "Next: issue the HTS token."
+      ? "Next: issue the ATS bond."
       : lifecycle === "issued" && backerAccountId
-        ? "Next: airdrop one share to the backer account."
+        ? "Next: mint one share to the backer."
         : lifecycle === "issued"
-          ? "Next: pause the token, or save a backer account (0.0.x) to airdrop first."
+          ? "Next: pause the bond, or save a backer 0x / 0.0.x to mint first."
           : lifecycle === "transferred"
-            ? "Next: freeze that holder so the share cannot trade."
+            ? "Next: pause the bond (compliance control)."
             : lifecycle === "frozen"
               ? "Next: both founders sign, then release the coupon."
               : "Coupon paid.";
@@ -107,19 +112,18 @@ export function TokenPanel({ slug }: { slug: string }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <h2 className="text-base font-medium">Hedera asset</h2>
+        <h2 className="text-base font-medium">ATS bond</h2>
         <Badge variant="secondary">{LIFECYCLE_LABEL[lifecycle]}</Badge>
       </div>
       <p className="text-sm leading-6 text-muted-foreground">
-        {campaign.tokenName} ({campaign.tokenSymbol}) is an invoice/revenue-share token
-        with freeze and pause keys — a lifecycle like Asset Tokenization Studio, not a
-        meme ticker.
+        {campaign.tokenName} ({campaign.tokenSymbol}) is an Asset Tokenization Studio
+        bond (ERC-1400/3643 diamond) with a whitelist and pause — not a meme ticker.
       </p>
       <p className="text-xs font-medium">{nextStep}</p>
       {campaign.tokenId ? (
         <a
           className="block font-mono text-xs text-primary underline-offset-4 hover:underline"
-          href={hashscanTokenUrl(campaign.tokenId)}
+          href={hashscanContractUrl(campaign.tokenId)}
           target="_blank"
           rel="noreferrer"
         >
@@ -129,13 +133,13 @@ export function TokenPanel({ slug }: { slug: string }) {
         <p className="font-mono text-xs text-muted-foreground">No token id yet</p>
       )}
       <div className="space-y-1.5">
-        <Label htmlFor="backer-account">Backer Hedera account</Label>
+        <Label htmlFor="backer-account">Backer address</Label>
         <div className="flex flex-wrap gap-2">
           <Input
             id="backer-account"
             value={backerDraft}
             onChange={(event) => setBackerDraft(event.target.value)}
-            placeholder="0.0.12345"
+            placeholder="0x… or 0.0.12345"
             className="min-w-48 flex-1 font-mono"
             disabled={lifecycle !== "draft" && lifecycle !== "issued"}
           />
@@ -156,6 +160,46 @@ export function TokenPanel({ slug }: { slug: string }) {
             {busy === "set-backer" ? "Saving…" : "Save backer"}
           </Button>
         </div>
+        {suggestedBacker ? (
+          <p className="text-xs text-muted-foreground">
+            Latest Privy pledger {shortAddress(suggestedBacker.wallet)}
+            {suggestedBacker.accountId
+              ? ` maps to ${suggestedBacker.accountId}`
+              : " — mint goes to this 0x address"}
+            .
+            {(suggestedBacker.accountId && suggestedBacker.accountId !== backerAccountId) ||
+            suggestedBacker.wallet.toLowerCase() !== (backerAccountId ?? "").toLowerCase() ? (
+              <>
+                {" "}
+                <button
+                  type="button"
+                  className="text-primary underline-offset-4 hover:underline"
+                  disabled={
+                    Boolean(busy) ||
+                    (lifecycle !== "draft" && lifecycle !== "issued")
+                  }
+                  onClick={() => {
+                    const accountId = suggestedBacker.accountId ?? suggestedBacker.wallet;
+                    if (!accountId) return;
+                    setBackerDraft(accountId);
+                    post(`/api/campaigns/${slug}/token`, {
+                      action: "set-backer",
+                      accountId,
+                    }).catch(() => undefined);
+                  }}
+                >
+                  Use this address
+                </button>
+              </>
+            ) : null}
+          </p>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Mint one share here, then pause the bond. After a Privy pledge, this desk
+            can use that wallet directly — no Hedera 0.0.x mapping required. Env
+            HEDERA_BACKER_ACCOUNT_ID still works as a fallback.
+          </p>
+        )}
         {backerAccountId ? (
           <a
             className="inline-block font-mono text-xs text-primary underline-offset-4 hover:underline"
@@ -165,12 +209,7 @@ export function TokenPanel({ slug }: { slug: string }) {
           >
             {backerAccountId} on HashScan
           </a>
-        ) : (
-          <p className="text-xs text-muted-foreground">
-            Airdrop one share here, then freeze that holder. Env
-            HEDERA_BACKER_ACCOUNT_ID still works as a fallback.
-          </p>
-        )}
+        ) : null}
       </div>
       <div className="flex flex-wrap gap-2">
         <Button
@@ -178,7 +217,7 @@ export function TokenPanel({ slug }: { slug: string }) {
           disabled={Boolean(busy) || !canIssue}
           onClick={() => post(`/api/campaigns/${slug}/token`, { action: "issue" })}
         >
-          {busy === "issue" ? "Issuing…" : "Issue token"}
+          {busy === "issue" ? "Issuing…" : "Issue bond"}
         </Button>
         <Button
           size="sm"
@@ -186,7 +225,7 @@ export function TokenPanel({ slug }: { slug: string }) {
           disabled={Boolean(busy) || !canTransfer}
           onClick={() => post(`/api/campaigns/${slug}/token`, { action: "transfer" })}
         >
-          {busy === "transfer" ? "Transferring…" : "Transfer share"}
+          {busy === "transfer" ? "Minting…" : "Mint share"}
         </Button>
         <Button
           size="sm"
@@ -194,7 +233,7 @@ export function TokenPanel({ slug }: { slug: string }) {
           disabled={Boolean(busy) || !canFreeze}
           onClick={() => post(`/api/campaigns/${slug}/token`, { action: "freeze" })}
         >
-          {busy === "freeze" ? "Freezing…" : "Freeze / pause"}
+          {busy === "freeze" ? "Pausing…" : "Pause / control list"}
         </Button>
       </div>
       {!operatorConfigured ? (
@@ -205,15 +244,15 @@ export function TokenPanel({ slug }: { slug: string }) {
       ) : null}
       {!backerAccountId ? (
         <p className="text-xs text-muted-foreground">
-          Without a backer account, Freeze pauses the whole token instead of freezing
-          one holder.
+          Without a backer address, Pause still pauses the whole bond.
         </p>
       ) : null}
       <div className="space-y-1">
         <TxLink id={campaign.issueTxId} label="Issue tx" />
-        <TxLink id={campaign.transferTxId} label="Transfer tx" />
-        <TxLink id={campaign.freezeTxId} label="Freeze / pause tx" />
-        <TxLink id={campaign.payoutTxId} label="Coupon payout tx" />
+        <TxLink id={campaign.transferTxId} label="Mint tx" />
+        <TxLink id={campaign.freezeTxId} label="Pause tx" />
+        <TxLink id={campaign.couponTxId} label="Coupon record tx" />
+        <TxLink id={campaign.payoutTxId} label="Coupon HBAR tx" />
       </div>
       <div className="space-y-3 border-t border-border pt-4">
         <h3 className="text-sm font-medium">Payout policy (2 of 2)</h3>
@@ -225,22 +264,29 @@ export function TokenPanel({ slug }: { slug: string }) {
           Founder: {approvals.founderWallet ? shortAddress(approvals.founderWallet) : "pending"}{" "}
           · Operator: {approvals.operator ? "signed" : "pending"}
         </p>
-        <PayoutButtons
-          slug={slug}
-          busy={busy}
-          canApprove={canApprove}
-          payoutReady={canRelease}
-          onFounder={(wallet) =>
-            post(`/api/campaigns/${slug}/payout`, {
-              action: "approve-founder",
-              wallet,
-            })
-          }
-          onOperator={() =>
-            post(`/api/campaigns/${slug}/payout`, { action: "approve-operator" })
-          }
-          onRelease={() => post(`/api/campaigns/${slug}/payout`, { action: "release" })}
-        />
+        {lifecycle === "paid" ? (
+          <p className="text-xs text-muted-foreground">
+            Coupon already released. HashScan links for the record and the HBAR
+            transfer are above.
+          </p>
+        ) : (
+          <PayoutButtons
+            slug={slug}
+            busy={busy}
+            canApprove={canApprove}
+            payoutReady={canRelease}
+            onFounder={(wallet) =>
+              post(`/api/campaigns/${slug}/payout`, {
+                action: "approve-founder",
+                wallet,
+              })
+            }
+            onOperator={() =>
+              post(`/api/campaigns/${slug}/payout`, { action: "approve-operator" })
+            }
+            onRelease={() => post(`/api/campaigns/${slug}/payout`, { action: "release" })}
+          />
+        )}
       </div>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
     </div>

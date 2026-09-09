@@ -5,6 +5,9 @@ const nextConfig: NextConfig = {
     "@x402/hedera",
     "@hiero-ledger/sdk",
     "@hashgraph/sdk",
+    "@hashgraph/asset-tokenization-sdk",
+    "@hashgraph/asset-tokenization-contracts",
+    "ethers",
   ],
 };
 

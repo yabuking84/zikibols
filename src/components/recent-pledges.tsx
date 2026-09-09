@@ -53,6 +53,7 @@ export function RecentPledges({
               )}
               <p className="truncate font-mono text-xs text-muted-foreground">
                 {shortAddress(pledge.wallet)}
+                {pledge.hederaAccountId ? ` · ${pledge.hederaAccountId}` : ""}
               </p>
             </div>
             <span className="tabular-nums">{hbar(pledge.amountHbar)}</span>

@@ -14,6 +14,7 @@ export type Campaign = {
   story: string;
   creatorName: string;
   creatorWallet: `0x${string}`;
+  creatorEmail: string | null;
   goalHbar: number;
   pledgedHbar: number;
   backers: number;
@@ -28,6 +29,7 @@ export type Campaign = {
   transferTxId: string | null;
   freezeTxId: string | null;
   payoutTxId: string | null;
+  couponTxId: string | null;
   backerAccountId: string | null;
   treasuryEvm: `0x${string}`;
   imageHue: string;
@@ -43,22 +45,24 @@ export const campaigns: Campaign[] = [
       "Harbor Credit buys verified invoices from a Rotterdam freight desk and issues a short-duration bond to backers. Coupon is paid when the invoice clears. The campaign wallet can only release funds after two operators approve the payout.",
     creatorName: "Harbor Desk BV",
     creatorWallet: "0x1111111254eeb25477b68fb85ed929f73a960582",
+    creatorEmail: null,
     goalHbar: 12000,
-    pledgedHbar: 4380,
+    pledgedHbar: 4380, // seed book; live Privy pledges add on top
     backers: 27,
     daysLeft: 18,
     location: "Rotterdam",
     assetClass: "invoice-receivable",
     tokenName: "Harbor Invoice Bond 2026-Q3",
     tokenSymbol: "HIB26",
-    tokenId: null,
-    tokenLifecycle: "draft",
-    issueTxId: null,
-    transferTxId: null,
-    freezeTxId: null,
-    payoutTxId: null,
-    backerAccountId: null,
-    treasuryEvm: "0x0000000000000000000000000000000002e1a9a0",
+    tokenId: "0.0.10423725",
+    tokenLifecycle: "paid",
+    issueTxId: "0xc8c03897f547618583ed2fef2d9a8317bcc0f6c0adab523a50107a974a4e9dfc",
+    transferTxId: "0x3649110d7566cec1790e7cbc6f28ea93f17b649eced7083c3f5ab0fc11f6dc6a",
+    freezeTxId: "0xf57b9661a0e52b6d039f32a2acffdcb87d12fb5b2bc425efbb4de68a0e2c3940",
+    payoutTxId: "0.0.10418801@1788882136.867281572",
+    couponTxId: "0x35fd434f02a91089f878fa70848c7fa29a87afd63ae9bc52b98733cceb29c1ad",
+    backerAccountId: "0x7d5710637321f540b9ee8e1282c598d9b78f4f91",
+    treasuryEvm: "0x7d5710637321f540b9ee8e1282c598d9b78f4f91",
     imageHue: "32 42% 42%",
   },
   {
@@ -67,11 +71,12 @@ export const campaigns: Campaign[] = [
     blurb:
       "Revenue-share on a winter greenhouse crop. Backers receive a transfer-restricted share token.",
     story:
-      "Northwind is raising working capital for a greenhouse expansion. Backers receive a revenue-share token (not a meme ticker): freezeable, with a coupon once produce is sold. Before you pledge, the agent checks the creator’s public DeFi history on Aave and Compound.",
+      "Northwind is raising working capital for a greenhouse expansion. Backers receive a revenue-share token (not a meme ticker): freezeable, with a coupon once produce is sold. Before you pledge, the agent checks the creator’s public DeFi history on Aave, Compound, and Spark.",
     creatorName: "Northwind Cooperative",
     creatorWallet: "0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503",
+    creatorEmail: null,
     goalHbar: 8000,
-    pledgedHbar: 6120,
+    pledgedHbar: 6120, // seed book; live Privy pledges add on top
     backers: 41,
     daysLeft: 9,
     location: "Friesland",
@@ -84,8 +89,9 @@ export const campaigns: Campaign[] = [
     transferTxId: null,
     freezeTxId: null,
     payoutTxId: null,
+    couponTxId: null,
     backerAccountId: null,
-    treasuryEvm: "0x0000000000000000000000000000000002e1a9a0",
+    treasuryEvm: "0x7d5710637321f540b9ee8e1282c598d9b78f4f91",
     imageHue: "152 28% 32%",
   },
 ];
@@ -123,6 +129,11 @@ export function toCatalogItem(campaign: Pick<Campaign, "slug" | "title" | "token
 
 export const RESERVED_SLUGS = new Set(["new"]);
 
+/** Harbor Credit and Northwind Farms ship with fixture pledged totals. */
+export function isSeedCatalog(slug: string) {
+  return campaigns.some((campaign) => campaign.slug === slug);
+}
+
 export function slugifyCampaign(title: string) {
   const slug = title
     .toLowerCase()
@@ -134,5 +145,9 @@ export function slugifyCampaign(title: string) {
 
 export function isEvmAddress(value: string): value is `0x${string}` {
   return /^0x[a-fA-F0-9]{40}$/.test(value);
+}
+
+export function isPublicEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 

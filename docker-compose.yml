@@ -1,0 +1,20 @@
+services:
+  zikibols:
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_PRIVY_APP_ID: ${NEXT_PUBLIC_PRIVY_APP_ID}
+        NEXT_PUBLIC_CAMPAIGN_TREASURY: ${NEXT_PUBLIC_CAMPAIGN_TREASURY}
+    env_file: .env.local
+    ports:
+      - "3000:3000"
+    volumes:
+      - zikibols-data:/data
+    environment:
+      ZIKIBOLS_DATA_PATH: /data/state.json
+      HEDERA_PAY_TO_ACCOUNT: ${HEDERA_PAY_TO_ACCOUNT:-0.0.10421774}
+      HEDERA_HCS_TOPIC_ID: ${HEDERA_HCS_TOPIC_ID:-0.0.10421775}
+    restart: unless-stopped
+
+volumes:
+  zikibols-data:

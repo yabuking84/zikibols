@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "zikibols",
+  title: "Zikibols",
   description: "Crowdfund tokenized campaigns with on-chain due diligence",
 };
 

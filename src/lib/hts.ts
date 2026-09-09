@@ -1,4 +1,5 @@
 import {
+  AccountCreateTransaction,
   AccountId,
   Client,
   Hbar,
@@ -30,6 +31,14 @@ export function isHederaOperatorConfigured() {
   return Boolean(operatorAccountId() && operatorPrivateKeyRaw());
 }
 
+export function getOperatorAccountId() {
+  return operatorAccountId();
+}
+
+export function getOperatorPrivateKeyRaw() {
+  return operatorPrivateKeyRaw();
+}
+
 export function getBackerAccountId() {
   return process.env.HEDERA_BACKER_ACCOUNT_ID ?? "";
 }
@@ -58,6 +67,30 @@ async function withClient<T>(run: (client: Client) => Promise<T>) {
   } finally {
     client.close();
   }
+}
+
+export async function withHederaClient<T>(run: (client: Client) => Promise<T>) {
+  return withClient(run);
+}
+
+export async function createReceiverAccount(memo: string) {
+  const key = parseKey(operatorPrivateKeyRaw());
+  return withClient(async (client) => {
+    const response = await new AccountCreateTransaction()
+      .setKey(key.publicKey)
+      .setInitialBalance(new Hbar(0))
+      .setAccountMemo(memo.slice(0, 100))
+      .execute(client);
+    const receipt = await response.getReceipt(client);
+    const accountId = receipt.accountId?.toString();
+    if (!accountId) {
+      throw new Error("Account create succeeded but returned no account id");
+    }
+    return {
+      accountId,
+      transactionId: response.transactionId.toString(),
+    };
+  });
 }
 
 export async function issueCampaignToken(input: {
@@ -133,7 +166,7 @@ export async function payCoupon(recipient: string, tinybars = 1000) {
     const response = await new TransferTransaction()
       .addHbarTransfer(treasury, amount.negated())
       .addHbarTransfer(recipient, amount)
-      .setTransactionMemo("zikibols coupon payout")
+      .setTransactionMemo("Zikibols coupon payout")
       .execute(client);
     await response.getReceipt(client);
     return { transactionId: response.transactionId.toString(), recipient };
