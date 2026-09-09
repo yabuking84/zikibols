@@ -20,9 +20,12 @@ RUN npm run build \
   && mkdir -p /data \
   && chown node:node /data
 
-USER node
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 ENV ZIKIBOLS_DATA_PATH=/data/state.json
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 EXPOSE 3000
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["npm", "run", "start"]

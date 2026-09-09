@@ -85,7 +85,7 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
         <BrandLogo />
         <div className="leading-tight">
           <p className="text-sm font-semibold">Zikibols</p>
-          <p className="text-xs text-muted-foreground">Backers & desk</p>
+          <p className="text-xs text-muted-foreground">Invest & Relax</p>
         </div>
       </Link>
       <nav className="flex-1 space-y-6 overflow-y-auto px-2 py-2">

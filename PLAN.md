@@ -8,7 +8,7 @@ Event: [ETHOnline 2026](https://ethglobal.com/events/ethonline2026) (4–16 Sep 
 
 Partner prizes are capped at **3 partners** per submission; multiple tracks from one partner count as one. We submit to **Hedera, The Graph, Privy** and write qualification paragraphs for the five tracks in [Prize tracks](#prize-tracks-what-we-are-building-toward).
 
-**Now (Thu 10 Sep).** Code for all five tracks is on GitHub `main` ([PR #1](https://github.com/yabuking84/zikibols/pull/1) merged). Remaining: a **public URL** with a writable disk, `OPENAI_API_KEY` for the LLM demo path, ≤4 min video, tag `v1.0.0`, Hacker Dashboard. Harbor Credit is the HashScan proof; record Issue → Coupon live on **Northwind Farms**.
+**Now (Thu 10 Sep).** Code for all five tracks is on GitHub `main` ([PR #1](https://github.com/yabuking84/zikibols/pull/1) merged). Remaining: a **public URL** (`Dockerfile` + `fly.toml`; needs Fly login or a VPS), `OPENAI_API_KEY` for the LLM demo path, push local CI/theme/logo, ≤4 min video, tag `v1.0.0`, Hacker Dashboard. Harbor Credit is the HashScan proof; record Issue → Coupon live on **Northwind Farms**.
 
 ---
 
@@ -342,7 +342,7 @@ Deadline **Sun 13 Sep, 12:00 EDT / 20:00 GST**. Code freeze Friday night; Saturd
 ### Thu 10 Sep — token layer and deploy
 
 - [x] If go: `src/lib/ats.ts`, token/payout routes, token panel copy, `.env.example`. If no-go: label seed totals, handle pending airdrop (mirror check, fall back to pause).
-- [ ] Deploy to a host with a writable disk (`Dockerfile` / `docker-compose.yml`); copy env; add the origin in Privy; smoke test Check → Pledge. Local `npm run build` succeeds; CI workflow is in `.github/workflows/ci.yml` (push with the next commit).
+- [ ] Deploy to a host with a writable disk. `Dockerfile` + `docker-compose.yml` + `fly.toml` are in the repo; the image chowns `/data` at start so a Fly/Docker volume is writable. Copy env; pass `NEXT_PUBLIC_*` as build args; add the origin in Privy; smoke test Check → Pledge. CI workflow is local until the next commit/push.
 - [x] README: AI tools used; Privy UX paragraph; 402 `curl`; two-payment flow; HCS extra point; standards-leverage paragraph; From-scratch statement; ATS section.
 
 ### Fri 11 Sep — rehearsal and freeze

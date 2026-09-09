@@ -113,7 +113,19 @@ On a VPS with Docker:
 docker compose --env-file .env.local up --build -d
 ```
 
-That mounts a named volume at `/data` for `state.json`. Harbor Credit ships with its HashScan lifecycle already in the seed catalog, so a cold start still shows the paid bond. Walk Issue → Coupon live on Northwind Farms.
+On [Fly.io](https://fly.io) (this repo’s `fly.toml` pins a 1 GB volume at `/data` and keeps one machine running):
+
+```bash
+fly launch --copy-config --no-deploy
+fly volumes create zikibols_data --size 1
+fly secrets import < .env.local
+set -a && source .env.local && set +a
+fly deploy \
+  --build-arg NEXT_PUBLIC_PRIVY_APP_ID="$NEXT_PUBLIC_PRIVY_APP_ID" \
+  --build-arg NEXT_PUBLIC_CAMPAIGN_TREASURY="$NEXT_PUBLIC_CAMPAIGN_TREASURY"
+```
+
+That mounts a named volume at `/data` for `state.json`. Harbor Credit ships with its HashScan lifecycle already in the seed catalog, so a cold start still shows the paid bond. Walk Issue → Coupon live on Northwind Farms. Add the public origin in Privy **Allowed origins**.
 
 ---
 

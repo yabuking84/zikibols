@@ -1,0 +1,43 @@
+# Public URL for judges: `fly launch --copy-config` then the commands in README.
+# Persistent volume is required — pledges and ATS ids live in /data/state.json.
+
+app = "zikibols-ethonline"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[build.args]
+  NEXT_PUBLIC_CAMPAIGN_TREASURY = "0x7d5710637321f540b9ee8e1282c598d9b78f4f91"
+
+[env]
+  PORT = "3000"
+  HOSTNAME = "0.0.0.0"
+  ZIKIBOLS_DATA_PATH = "/data/state.json"
+  HEDERA_PAY_TO_ACCOUNT = "0.0.10421774"
+  HEDERA_HCS_TOPIC_ID = "0.0.10421775"
+  NEXT_PUBLIC_CAMPAIGN_TREASURY = "0x7d5710637321f540b9ee8e1282c598d9b78f4f91"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "20s"
+    method = "GET"
+    path = "/api/status"
+
+[[vm]]
+  memory = "1gb"
+  cpu_kind = "shared"
+  cpus = 1
+
+[mounts]
+  source = "zikibols_data"
+  destination = "/data"
