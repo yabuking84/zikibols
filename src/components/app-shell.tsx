@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
@@ -9,7 +10,6 @@ import {
   LayoutDashboard,
   Menu,
   Plus,
-  Shield,
   Wallet,
   Wrench,
 } from "lucide-react";
@@ -25,6 +25,25 @@ import { cn } from "cn";
 const generalNav = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
 ];
+
+const LOGO = {
+  src: "/zikibols-logo.jpg",
+  width: 784,
+  height: 1168,
+} as const;
+
+function BrandLogo({ className }: { className?: string }) {
+  return (
+    <Image
+      src={LOGO.src}
+      alt="Zikibols"
+      width={LOGO.width}
+      height={LOGO.height}
+      className={cn("h-9 w-auto rounded-lg object-contain", className)}
+      priority
+    />
+  );
+}
 
 function NavLink({
   href,
@@ -62,15 +81,13 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex h-12 items-center gap-2 px-3">
-        <div className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-          <Shield className="size-4" />
-        </div>
+      <Link href="/" className="flex h-12 items-center gap-2 px-3" onClick={onNavigate}>
+        <BrandLogo />
         <div className="leading-tight">
           <p className="text-sm font-semibold">Zikibols</p>
           <p className="text-xs text-muted-foreground">Backers & desk</p>
         </div>
-      </div>
+      </Link>
       <nav className="flex-1 space-y-6 overflow-y-auto px-2 py-2">
         <div className="space-y-1">
           <p className="px-2 pb-1 text-xs font-medium text-muted-foreground">
@@ -241,6 +258,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             >
               <Menu />
             </Button>
+            <Link href="/" className="shrink-0 md:hidden" aria-label="Zikibols home">
+              <BrandLogo className="h-8" />
+            </Link>
             <Separator
               orientation="vertical"
               className="hidden h-4! w-px self-center md:block"

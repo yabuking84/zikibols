@@ -15,9 +15,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
       appId={appId}
       config={{
         appearance: {
-          theme: "light",
-          accentColor: "#0f172a",
-          logo: undefined,
+          theme: "dark",
+          accentColor: "#c3001a",
+          logo: "/zikibols-logo.jpg",
         },
         defaultChain: hederaTestnet,
         supportedChains: [hederaTestnet],

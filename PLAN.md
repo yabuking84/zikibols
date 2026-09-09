@@ -8,6 +8,8 @@ Event: [ETHOnline 2026](https://ethglobal.com/events/ethonline2026) (4–16 Sep 
 
 Partner prizes are capped at **3 partners** per submission; multiple tracks from one partner count as one. We submit to **Hedera, The Graph, Privy** and write qualification paragraphs for the five tracks in [Prize tracks](#prize-tracks-what-we-are-building-toward).
 
+**Now (Thu 10 Sep).** Code for all five tracks is on GitHub `main` ([PR #1](https://github.com/yabuking84/zikibols/pull/1) merged). Remaining: a **public URL** with a writable disk, `OPENAI_API_KEY` for the LLM demo path, ≤4 min video, tag `v1.0.0`, Hacker Dashboard. Harbor Credit is the HashScan proof; record Issue → Coupon live on **Northwind Farms**.
+
 ---
 
 ## Vision
@@ -182,6 +184,7 @@ Work items:
 
 - [x] **AI tool attribution.** Rules require documenting where and how AI tools were used, and including spec/planning artifacts in the repo. `PLAN.md` is the artifact; README has an "AI tools used" section.
 - [x] Submission form copy: partners = Hedera, The Graph, Privy; Graph AI pool = Start Fresh; five track paragraphs drafted below. Paste on Saturday.
+- [x] Public GitHub: default branch `main` has the submission (merged [PR #1](https://github.com/yabuking84/zikibols/pull/1)).
 - [ ] Public URL live and warm at submission time.
 
 ### Submission copy (paste into the Hacker Dashboard)
@@ -339,7 +342,7 @@ Deadline **Sun 13 Sep, 12:00 EDT / 20:00 GST**. Code freeze Friday night; Saturd
 ### Thu 10 Sep — token layer and deploy
 
 - [x] If go: `src/lib/ats.ts`, token/payout routes, token panel copy, `.env.example`. If no-go: label seed totals, handle pending airdrop (mirror check, fall back to pause).
-- [ ] Deploy to a host with a writable disk (`Dockerfile` / `docker-compose.yml`); copy env; add the origin in Privy; smoke test Check → Pledge.
+- [ ] Deploy to a host with a writable disk (`Dockerfile` / `docker-compose.yml`); copy env; add the origin in Privy; smoke test Check → Pledge. Local `npm run build` succeeds; CI workflow is in `.github/workflows/ci.yml` (push with the next commit).
 - [x] README: AI tools used; Privy UX paragraph; 402 `curl`; two-payment flow; HCS extra point; standards-leverage paragraph; From-scratch statement; ATS section.
 
 ### Fri 11 Sep — rehearsal and freeze

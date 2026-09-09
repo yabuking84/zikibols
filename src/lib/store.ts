@@ -92,9 +92,9 @@ function hydrate(seed: Campaign, state: StoredState): Campaign {
 async function load(): Promise<StoredState> {
   try {
     const file = dataFile();
-    const info = await stat(file);
+    const info = await stat(/* turbopackIgnore: true */ file);
     if (cache && info.mtimeMs === cacheMtime) return cache;
-    const raw = await readFile(file, "utf8");
+    const raw = await readFile(/* turbopackIgnore: true */ file, "utf8");
     const parsed = JSON.parse(raw) as Partial<StoredState>;
     cache = {
       version: 1,
@@ -128,11 +128,11 @@ async function persist(state: StoredState) {
   cache = state;
   try {
     const file = dataFile();
-    await mkdir(path.dirname(file), { recursive: true });
+    await mkdir(/* turbopackIgnore: true */ path.dirname(file), { recursive: true });
     const tmp = `${file}.${process.pid}.tmp`;
-    await writeFile(tmp, `${JSON.stringify(state, null, 2)}\n`, "utf8");
-    await rename(tmp, file);
-    cacheMtime = (await stat(file)).mtimeMs;
+    await writeFile(/* turbopackIgnore: true */ tmp, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+    await rename(/* turbopackIgnore: true */ tmp, file);
+    cacheMtime = (await stat(/* turbopackIgnore: true */ file)).mtimeMs;
   } catch {
     cacheMtime = Date.now();
   }
