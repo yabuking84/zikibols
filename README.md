@@ -137,7 +137,7 @@ fly deploy \
   --build-arg NEXT_PUBLIC_CAMPAIGN_TREASURY="$NEXT_PUBLIC_CAMPAIGN_TREASURY"
 ```
 
-That mounts a named volume at `/data` for `state.json`. Harbor Credit ships with its HashScan lifecycle already in the seed catalog, so a cold start still shows the paid bond. Walk Issue → Coupon live on Northwind Farms. Add the public origin in Privy **Allowed origins**.
+That mounts a named volume at `/data` for `state.json`. Harbor Credit ships with its HashScan lifecycle already in the seed catalog, so a cold start still shows the paid bond. Walk Issue → Settlement live on Northwind Farms. Add the public origin in Privy **Allowed origins**.
 
 ---
 

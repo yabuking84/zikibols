@@ -104,7 +104,7 @@ Example: you can gift a bookstore gift card to a friend; you usually cannot free
 
 **Coupon (bond interest / scheduled extra)**  
 A planned extra payment to bond holders.  
-Example: “Every 90 days, pay the invoice backers a little extra.” In Zikibols the extra is a speck, only to prove the button works. See [readme-non-technical.md](./readme-non-technical.md#what-the-tiny-thank-you-is).
+Example: “Every 90 days, pay the invoice backers a little extra.” Zikibols does not use this ATS tool. **Pay founder** / **Pay backers** send HBAR from the treasury instead. See [Settlement](./readme-non-technical.md#settlement--the-founders-payday).
 
 **Dividend (profit share for equity)**  
 If the company/building made money, send holders a cut.  

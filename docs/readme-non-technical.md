@@ -174,16 +174,16 @@ That locked certificate is what the app calls an **ATS bond**. Fancy name. Meani
 
 Harbor Credit is already finished on the demo network, so its operator desk is a completed example. Northwind Farms (or a new campaign) is where you walk the whole sequence live.
 
-### The locked receipt is not the thank-you
+### The locked receipt is not the cash
 
 Two objects are easy to mix up:
 
 | Thing | What it is |
 |---|---|
 | Official receipt / certificate | The **ATS bond** — an IOU that says “this backer funded this deal.” |
-| Tiny thank-you | The **coupon** — a speck of play money sent later |
+| The raise | The HBAR sitting in the treasury — **Pay founder** / **Pay backers** move this |
 
-The operator prints the share, **then** freezes it, **then** (after two people say yes) sends the thank-you. The freeze is on the share, not on the HBAR.
+The operator prints the share, **then** freezes it, **then** sends the raise. The freeze is on the share, not on the HBAR.
 
 **Why it cannot be casually resold.** In the story this is not a joke coin. It is a restricted IOU, like a private loan note.
 
@@ -191,46 +191,23 @@ The later cut is tied to **who holds the IOU**, not to a moral rule that only th
 
 This share is a **private IOU**, not a public bond. The founder took money from Alice after Alice (and the robot) looked at the deal. The operator is supposed to know who that claim belongs to. If Alice dumps it on a marketplace five minutes later, Bob never went through that, and the office no longer knows who they owe.
 
-If this were a normal listed bond, Bob **would** get the coupon. He bought the claim; the payment follows the current holder. That is a secondary market. This demo is deliberately **not** that. Pause means: no casual flip to a stranger. A later transfer could still happen if the operator checks Bob and allows him — that is “approved holder,” not “free trading.”
+If this were a normal listed bond, Bob **would** get the later cut. He bought the claim; the payment follows the current holder. That is a secondary market. This demo is deliberately **not** that. Pause means: no casual flip to a stranger. A later transfer could still happen if the operator checks Bob and allows him — that is “approved holder,” not “free trading.”
 
 So “people who funded” here means **the approved holder of the locked share**, which in the demo is the original backer. It does not mean Alice is the only human who could ever deserve a cut.
 
 The **Pause / freeze** stamp is that rule on the network: the share cannot be freely moved.
 
-The tiny thank-you is separate. That is the later payout. In this demo it is a proof speck (0.00001 HBAR), not the share itself.
+The cash is separate. That is [Settlement](#settlement--the-founders-payday).
 
-### What the tiny thank-you is
+In the **story** the app is telling, you chip in today. Months later the shipping invoice is paid, or the greenhouse crop is sold. Then backers get their cut.
 
-The tiny thank-you **is the payout**, and it goes to **the first minted backer** — not every person who pledged.
-
-When the operator clicks **Release coupon**, two things happen:
-
-1. A note is written on the bond: “this share is due a coupon.”
-2. A speck of play money is sent to that backer.
-
-That second step is the thank-you.
-
-In the **story** the app is telling, you chip in today. Months later the shipping invoice is paid, or the greenhouse crop is sold. Then backers get their cut. That later cut is the payout (the app calls it a coupon).
-
-In **this prototype**, none of that later event happens. There is no real invoice money coming in, no harvest sale, and no formula like “you pledged 50, so you get 53 back.” Nobody will wait 90 days for a demo.
-
-So the Operator desk fakes the *last step of the story* in the smallest way that is still real on the network:
-
-- Two people must click yes.
-- Then a speck of play money actually moves to the first minted backer (1000 tinybars — **0.00001** of one HBAR).
-- Anyone can open the public receipt and see it landed.
-
-**“Prove the payout button works”** means: prove the *machine* works end to end — money in, locked share, two approvals, money out — not prove that backers earned a return.
-
-If this were a real product, that button would send a calculated share of the actual cash. Here the amount is tiny on purpose so nobody confuses it with profit. Only **one** backer gets this speck, not every person who pledged.
-
-The **raise** is a different pot. That is [Settlement](#settlement--the-founders-payday) — **Pay founder** and **Pay backers** — not this crumb.
+In **this prototype**, none of that later event happens. There is no real invoice money coming in, no harvest sale, and no formula like “you pledged 50, so you get 53 back.” An operator clicks **Pay founder** / **Pay backers** when they decide it is time.
 
 ### Settlement — the founder’s payday
 
 Pledges sit in **one office jar** (the campaign treasury). Hedera does not know which coins were for which flyer; the website clipboard does.
 
-After the same two people say yes (founder + office), the Operator desk can empty **this listing’s** share of the jar:
+The Operator desk can empty **this listing’s** share of the jar:
 
 | Button | What leaves the jar | Where it goes |
 |---|---|---|
@@ -243,7 +220,7 @@ The two demo campaigns’ starting totals are **fixtures**. Only pledges you mak
 
 ### Who is the operator
 
-The operator exists because pledges are just play money sitting in a pot. Someone has to turn that into the locked share, send the tiny coupon, and later empty this listing’s coins to the founder and the backers. The story is: **money cannot leave on one person’s click.** The founder says yes, the operator says yes, then the buttons unlock.
+The operator exists because pledges are just play money sitting in a pot. Someone has to turn that into the locked share, then empty this listing’s coins to the founder and the backers.
 
 **In a real product** it would be a named office: the campaign’s treasury, a lawyer, a platform admin — someone with the keys to the company wallet, not a random backer.
 
@@ -251,12 +228,11 @@ The operator exists because pledges are just play money sitting in a pot. Someon
 
 | Button | Who can press it |
 |---|---|
-| Issue / Mint / Pause / Co-sign / Release coupon / **Pay founder** / **Pay backers** | Anyone who opens the Operator desk page. There is **no operator login**. |
-| Approve as founder | Anyone **logged in with email** (Privy). The app does **not** check that they are the campaign’s real founder. |
+| Issue / Mint / Pause / **Pay founder** / **Pay backers** | Anyone who opens the Operator desk page. There is **no operator login**. |
 
 The **actual** issue / mint / pause / payout on the network is signed by a play-money account stored on the server (`HEDERA_OPERATOR_*` keys, or the agent keys if those are missing). Clicking the buttons uses *that* account, not the clicker’s personal pocket. If those keys are missing, Issue stays disabled. You can still look at the page.
 
-**Short example.** Alice pledges from her email login. She is a **backer**. She cannot (in the story) print the bond or pay herself. Bob, who deployed the demo and funded the operator account, opens Operator desk and runs Issue → Coupon, then **Pay founder** and **Pay backers**. Bob is the **operator**. In the demo, if you know the URL and the server has keys, *you* can be Bob. That is a shortcut, not bank-grade access control.
+**Short example.** Alice pledges from her email login. She is a **backer**. She cannot (in the story) print the bond or pay herself. Bob, who deployed the demo and funded the operator account, opens Operator desk and runs Issue → Mint → Pause, then **Pay founder** and **Pay backers**. Bob is the **operator**. In the demo, if you know the URL and the server has keys, *you* can be Bob. That is a shortcut, not bank-grade access control.
 
 ---
 
@@ -280,11 +256,9 @@ The **actual** issue / mint / pause / payout on the network is signed by a play-
 | The Graph                                                                                                                   | A live lookup of public lending history (not a screenshot)                     |
 | Operator / Operator desk                                                                                                    | The back-office person and their page after money came in. In a real product, a named treasury; in this demo, whoever opens the page while the server has operator keys |
 | ATS                                                                                                                         | Asset Tokenization Studio — Hedera’s toolkit for official, rule-bound shares   |
-| Official receipt / certificate                                                                                              | The locked share (the ATS bond). Not the tiny thank-you                        |
+| Official receipt / certificate                                                                                              | The locked share (the ATS bond). Not the HBAR in the treasury                  |
 | ATS bond                                                                                                                    | The official locked share / IOU, not a meme coin                               |
-| Coupon / tiny thank-you                                                                                                     | The **Release coupon** speck to the **first minted** backer. In the story it is their cut later; in this demo it is 0.00001 HBAR to prove the ATS button works |
-| Settlement / Pay founder / Pay backers                                                                                      | After the same two clicks: most of this listing’s real pledges go to the founder’s wallet; the rest is split back across everyone who pledged |
-| 2-of-2                                                                                                                      | Two people must click yes before money goes out                                |
+| Settlement / Pay founder / Pay backers                                                                                      | Most of this listing’s real pledges go to the founder’s wallet; the rest is split back across everyone who pledged |
 | Pause / freeze                                                                                                              | Stamp the share so it cannot be freely moved. The payout follows the **approved holder**, not a stranger who bought it on a marketplace |
 | HCS                                                                                                                         | A public stamp-book so the research receipt cannot be quietly rewritten        |
 
@@ -301,15 +275,13 @@ The **actual** issue / mint / pause / payout on the network is signed by a play-
 - Not Kickstarter with comments, reward tiers, and a social feed
 - Not a joke coin you trade
 
-It is a prototype showing: *a normal person can fund a real-world-style deal without installing crypto software, after a robot actually checked the founder, and the payout cannot go out on one person’s click — including sending the raise to the founder.*
+It is a prototype showing: *a normal person can fund a real-world-style deal without installing crypto software, after a robot actually checked the founder — including sending the raise to the founder.*
 
 Honest limits of the demo:
 
-- The **Release coupon** thank-you is a tiny proof, not calculated profit
 - **Pay founder** / **Pay backers** are a fixed 90 / 10 split of live pledges, on an operator click — no invoice, harvest, or goal check
-- Each unique pledger can get **one** share (not sized to how much they sent). The coupon crumb still goes to the first minted address — [how mint and pledge proof work](./readme-ats.md#one-bond-many-holders--what-ats-can-do-vs-what-we-do)
-- “Approve as founder” is whoever is logged in, not a bank-grade two-key lock
-- The Operator desk has **no operator login**; Issue / Mint / Pause / Co-sign / Release / Pay founder / Pay backers are open to anyone who can open the URL (the server keys still do the on-chain work; a cap and a reserve limit how much can leave)
+- Each unique pledger can get **one** share (not sized to how much they sent) — [how mint and pledge proof work](./readme-ats.md#one-bond-many-holders--what-ats-can-do-vs-what-we-do)
+- The Operator desk has **no operator login**; Issue / Mint / Pause / Pay founder / Pay backers are open to anyone who can open the URL (the server keys still do the on-chain work; a cap and a reserve limit how much can leave)
 - Diligence can be skipped on purpose (**Pledge anyway**)
 - The two listing types (invoice bond vs harvest share) are a **story label**; both still become the same locked ATS bond
 - Starting pledged totals on the two demo campaigns are fixtures; only pledges you make in the app have a public receipt or count toward settlement
