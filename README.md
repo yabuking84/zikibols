@@ -298,8 +298,9 @@ The desk is the office after money is in. Two piles: **cash** (pledged HBAR in t
 2. **Issue bond** — deploys an ATS diamond clone on Hedera testnet (factory `0.0.9213391`). You get a contract id and HashScan link. Does not give anyone a share or move HBAR. Once only.
 3. **Mint share** — only after **Issue bond**. One unit per unique pledger (whitelist first). A 13 ℏ pledge still mints **1**, not 13. Repeat for each wallet; the same wallet cannot be minted twice. Clicking mint before Issue opens a modal. After Pause, minting is closed. **Mint to another address** covers a `0x` / `0.0.x` that is not on the pledge list.
 4. **Pause bond** — one stamp on the **whole** bond (compliance control), not per backer. Each mint already put that holder on the whitelist. The desk refuses to pause while any pledger is unminted. After this, minting is closed **and the campaign stops accepting pledges**.
-5. **Pay founder** — 90% of this campaign’s live pledges from the treasury to the wallet on the listing. The desk refuses until the bond is paused.
-6. **Pay backers** — the other 10%, pro-rata by pledge amount, to backers who **hold a minted share**. Pause first; every pledger must also be minted. If either is missing, a modal explains and nothing is paid.
+5. **Unpause bond** — lifts that stamp. Transfers resume, minting reopens, and the listing takes new pledges again; settlement goes back to waiting for a pause. Only offered while the bond is paused, and refused once **Pay founder** or **Pay backers** has run — reopening a settled raise would take pledges no payout covers.
+6. **Pay founder** — 90% of this campaign’s live pledges from the treasury to the wallet on the listing. The desk refuses until the bond is paused.
+7. **Pay backers** — the other 10%, pro-rata by pledge amount, to backers who **hold a minted share**. Pause first; every pledger must also be minted. If either is missing, a modal explains and nothing is paid.
 
 The **Settlement** block is the part that moves the raise.
 
@@ -349,6 +350,7 @@ The operator desk issues a bond through `@hashgraph/asset-tokenization-sdk` v8 a
 | Issue | `Bond.create` | Diamond contract on HashScan (`0.0.x`) |
 | Mint share | `Security.addToControlList` then `Security.issue` 1 unit to each unique pledger | Mint tx per backer |
 | Pause | `Security.pause` | Pause tx (the required lifecycle / compliance op) |
+| Unpause | `unpause` on the diamond's pause facet | Unpause tx lifting that stamp |
 
 Internal KYC is **on** at create (required for `deployBond` encoding), then deactivated so minting does not need a Terminal3 verifiable credential.
 
@@ -367,6 +369,7 @@ ATS can do much more (equity, dividends, voting, snapshots, lock, escrow, countr
 | **Whitelist / control list** | Each minted pledger is put on the allowed list. | `isWhiteList: true` + `Security.addToControlList` |
 | **Mint** | Hand out **one** unit per unique pledger (`0x` or `0.0.x`). | `Security.issue` amount `1` |
 | **Pause** | Freeze all transfers — the compliance / lifecycle op. | `Security.pause` |
+| **Unpause** | Lift the freeze and reopen the raise, until the payouts run. | `IPause` facet `unpause` |
 
 **Not used:** equity, dividends, voting (`erc20VotesActivated: false`), partitions, clearing, lock, snapshots, stock splits, redemption, country control lists, Terminal3 KYC, ATS Mass Payout.
 
@@ -416,7 +419,9 @@ Check **Integrations** on the dashboard first.
 | **Mint share** says issue first | The bond is still a draft. Click **Issue bond**, then mint. The route also refuses this. |
 | **Mint share** stays disabled | After pause, minting is closed. Each unique pledger has their own Mint button. |
 | **Pause bond** opens a modal | Some pledgers have no minted share. Mint them first — pause also closes new pledges. |
-| **Pledge** says the campaign is paused | Expected after **Pause bond**. The listing is not taking new backers. |
+| **Pledge** says the campaign is paused | Expected after **Pause bond**. The listing is not taking new backers until you **Unpause bond**. |
+| **Unpause bond** is not on the desk | It only appears while the bond is paused. Issue and pause it first. |
+| **Unpause bond** stays disabled | The raise is already settled, or operator keys are missing. A paid-out campaign cannot reopen. |
 | **Pay founder** / **Pay backers** stay disabled | Already paid, or the campaign has no live pledges. |
 | **Pay founder** / **Pay backers** say pause first | The bond is not paused yet. Mint every backer, then **Pause bond**. |
 | **Pay backers** opens a modal instead of paying | Some pledgers have no minted share. Mint each wallet listed in the modal, then click again. The route also refuses this with a `409`. |

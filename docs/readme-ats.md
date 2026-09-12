@@ -87,8 +87,8 @@ Different jobs: issuer, pauser, compliance officer. Not everyone is the boss.
 Example: only the cashier can open the till; only the manager can void a sale.
 
 **Pause**  
-Freeze *all* movement of the shares for a while.  
-Example: “Stop trading during an investigation,” like locking the stadium gates.
+Freeze *all* movement of the shares for a while, then unfreeze when the reason passes.  
+Example: “Stop trading during an investigation,” like locking the stadium gates and opening them again after.
 
 **Lock**  
 Freeze *one person’s* shares, or hold them until a date.  
@@ -157,6 +157,7 @@ A small slice:
 | Mint to someone | Yes — **[Mint share](#issue-bond-and-mint-share)** — **one** unit **per unique pledger** |
 | Allowed list | Yes — backer is put on the list before mint |
 | Pause | Yes — **Pause bond** (whole bond). Allowed list is per mint. |
+| Unpause | Yes — **Unpause bond**, until the payouts run |
 | Coupon | **Not used** on the desk. **Pay founder** / **Pay backers** are the payout |
 | Mass Payout (many holders at once) | **Not used.** **Pay founder** / **Pay backers** are ordinary HBAR sends from the treasury (`src/lib/settlement.ts`) |
 | Dividends, voting, splits, KYC website, escrow, full cap… | No, not in this demo |
@@ -198,7 +199,7 @@ Hands **one** unit of that already-issued bond to **one** wallet. The Operator d
 
 You can mint again to a **different** pledger. The same wallet cannot be minted twice. After the first successful mint the listing status becomes **Transferred**. Each mint is stored in `.data/state.json` (`runtime[slug].mints`) with a HashScan tx.
 
-Mint stays off until the bond is issued, and it closes after **Pause**.
+Mint stays off until the bond is issued, and it closes after **Pause** — until **Unpause bond** reopens it.
 
 What it does **not** do:
 
@@ -213,12 +214,15 @@ What it does **not** do:
 ```
 Issue bond  →  Mint share (each unique pledger)  →  Pause bond
         →  Pay founder  and/or  Pay backers
+                   ↑                    │
+                   └── Unpause bond ────┘  (only before either payout)
 ```
 
 1. **Issue bond** — print the official form on Hedera. No share handed out. No cash moved. Once only.
 2. **Mint share** — one click per unique pledger (or an extra address). Puts them on the allowed list, then hands **1** unit. Same wallet cannot be minted twice. Closes after Pause.
 3. **Pause bond** — stamp “cannot be freely sold” on the **whole** bond. Not per backer. Each **Mint share** already put that holder on the allowed list. The desk refuses until every pledger is minted. After this, minting is closed and the listing stops taking pledges.
-4. **Pay founder** / **Pay backers** — 90 / 10 of the live raise from the treasury. **Pay backers** only pays wallets holding a share, and refuses to run at all while any pledger is unminted (a modal lists them). Mint everyone **before** Pause, since Pause closes minting.
+4. **Unpause bond** — peel that stamp back off. The desk drops to step 2: transfers work again, minting reopens, the listing takes pledges, and Pay founder / Pay backers go back to waiting for a pause. The button only shows while the bond is paused, and it refuses once either payout has run — a settled raise cannot reopen, because new pledges would arrive after the split was already sent.
+5. **Pay founder** / **Pay backers** — 90 / 10 of the live raise from the treasury. **Pay backers** only pays wallets holding a share, and refuses to run at all while any pledger is unminted (a modal lists them). Mint everyone **before** Pause, since Pause closes minting.
 
 The cash pile and the certificate pile are different. Full walk: [readme-flow.md](./readme-flow.md#operator-desk-and-the-bond).
 

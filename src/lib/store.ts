@@ -19,6 +19,7 @@ export type CampaignRuntime = {
   issueTxId: string | null;
   transferTxId: string | null;
   freezeTxId: string | null;
+  unpauseTxId: string | null;
   payoutTxId: string | null;
   couponTxId: string | null;
   backerAccountId: string | null;
@@ -42,6 +43,7 @@ const RUNTIME_KEYS = [
   "issueTxId",
   "transferTxId",
   "freezeTxId",
+  "unpauseTxId",
   "payoutTxId",
   "couponTxId",
   "backerAccountId",
@@ -90,6 +92,7 @@ function runtimeFrom(seed: Campaign): CampaignRuntime {
     issueTxId: seed.issueTxId,
     transferTxId: seed.transferTxId,
     freezeTxId: seed.freezeTxId,
+    unpauseTxId: seed.unpauseTxId ?? null,
     payoutTxId: seed.payoutTxId,
     couponTxId: seed.couponTxId ?? null,
     backerAccountId: seed.backerAccountId,

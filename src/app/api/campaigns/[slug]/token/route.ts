@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export const maxDuration = 60;
-import { loadCampaign, patchCampaign, recordShareMint } from "@/lib/store";
+import { getSettlement, loadCampaign, patchCampaign, recordShareMint } from "@/lib/store";
 import { getBackerAccountId } from "@/lib/hts";
 import {
   controlListBacker,
@@ -9,6 +9,7 @@ import {
   issueBond,
   mintToBacker,
   pauseBond,
+  unpauseBond,
 } from "@/lib/ats";
 import { alreadyMinted } from "@/lib/mints";
 import { settlementQuote } from "@/lib/settlement";
@@ -150,6 +151,43 @@ export async function POST(
         freezeTxId: paused.transactionId,
       });
       return NextResponse.json({ campaign: updated, ...paused, mode: "pause" });
+    }
+
+    if (body.action === "unpause") {
+      if (campaign.tokenLifecycle !== "frozen") {
+        return NextResponse.json(
+          {
+            error:
+              campaign.tokenLifecycle === "paid"
+                ? "This bond was already released through the coupon payout."
+                : "The bond is not paused.",
+          },
+          { status: 400 },
+        );
+      }
+      if (!campaign.tokenId) {
+        return NextResponse.json({ error: "Issue the ATS bond first" }, { status: 400 });
+      }
+      // Unpause reopens pledges, so a raise that already paid out can never come
+      // back — new pledges would arrive after their share of the split was sent.
+      const settled = await getSettlement(slug);
+      if (settled.founder || settled.backers) {
+        const done = [settled.founder && "the founder", settled.backers && "the backers"]
+          .filter(Boolean)
+          .join(" and ");
+        return NextResponse.json(
+          {
+            error: `A payout has already run for ${done}. Unpausing would reopen the raise to pledges that no payout covers.`,
+          },
+          { status: 409 },
+        );
+      }
+      const unpaused = await unpauseBond(campaign.tokenId);
+      const updated = await patchCampaign(slug, {
+        tokenLifecycle: campaign.mints.length > 0 ? "transferred" : "issued",
+        unpauseTxId: unpaused.transactionId,
+      });
+      return NextResponse.json({ campaign: updated, ...unpaused, mode: "unpause" });
     }
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });

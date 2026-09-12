@@ -30,6 +30,7 @@ export type Campaign = {
   issueTxId: string | null;
   transferTxId: string | null;
   freezeTxId: string | null;
+  unpauseTxId?: string | null;
   payoutTxId: string | null;
   couponTxId: string | null;
   backerAccountId: string | null;

@@ -52,6 +52,9 @@ function formatAtsError(action: string | undefined, raw: string) {
     if (action === "transfer") {
       return "Mint share timed out waiting on Hedera. Refresh the desk and check HashScan before clicking Mint again.";
     }
+    if (action === "unpause") {
+      return "Unpause bond timed out waiting on Hedera. Refresh the desk and check HashScan before clicking Unpause again.";
+    }
     return "Hedera timed out. Refresh the desk — the transaction may still have landed.";
   }
   return raw;
@@ -137,6 +140,8 @@ export function TokenPanel({ slug }: { slug: string }) {
   const issued = Boolean(campaign.tokenId) && (lifecycle === "issued" || lifecycle === "transferred");
   const mintClosed = lifecycle === "frozen" || lifecycle === "paid";
   const canFreeze = lifecycle === "issued" || lifecycle === "transferred";
+  const settled = Boolean(settlement.paid.founder || settlement.paid.backers);
+  const canUnpause = lifecycle === "frozen" && !settled && operatorConfigured;
   const unmintedPledgers = settlement.quote.backers.filter(
     (backer) => !backer.minted && backer.pledgedTinybars > 0,
   );
@@ -150,7 +155,9 @@ export function TokenPanel({ slug }: { slug: string }) {
           : lifecycle === "transferred" || lifecycle === "issued"
             ? "Next: pause the bond. Each mint already put that backer on the allowed list."
             : lifecycle === "frozen"
-              ? "Next: pay the founder and backers from the treasury."
+              ? settled
+                ? "Next: pay the founder and backers from the treasury."
+                : "Next: pay the founder and backers from the treasury, or unpause to reopen the raise."
               : "Coupon paid.";
 
   return (
@@ -204,11 +211,29 @@ export function TokenPanel({ slug }: { slug: string }) {
         >
           {busy === "freeze" ? "Pausing…" : "Pause bond"}
         </Button>
+        {lifecycle === "frozen" ? (
+          <Button
+            size="sm"
+            variant="outline"
+            loading={busy === "unpause"}
+            disabled={Boolean(busy) || !canUnpause}
+            onClick={() => post(`/api/campaigns/${slug}/token`, { action: "unpause" })}
+          >
+            {busy === "unpause" ? "Unpausing…" : "Unpause bond"}
+          </Button>
+        ) : null}
       </div>
       {canFreeze && unmintedPledgers.length > 0 ? (
         <p className="text-xs text-muted-foreground">
           Pause waits until every pledger holds a share. Mint the remaining{" "}
           {unmintedPledgers.length} first — pause closes minting.
+        </p>
+      ) : null}
+      {lifecycle === "frozen" ? (
+        <p className="text-xs text-muted-foreground">
+          {settled
+            ? "This raise is settled, so the bond stays paused. Unpausing would reopen it to pledges that no payout covers."
+            : "Unpause lifts the compliance stamp: transfers resume, minting reopens, and the listing takes new pledges again. Settlement waits until it is paused."}
         </p>
       ) : null}
       <div className="space-y-2">
@@ -325,7 +350,10 @@ export function TokenPanel({ slug }: { slug: string }) {
           </div>
         </div>
       </div>
-      {busy === "issue" || busy?.startsWith("transfer:") || busy === "freeze" ? (
+      {busy === "issue" ||
+      busy?.startsWith("transfer:") ||
+      busy === "freeze" ||
+      busy === "unpause" ? (
         <p className="text-xs text-muted-foreground">
           Waiting on Hedera. Issue and mint often take 30–60 seconds. Do not click
           again — if this fails, the error will show here.
@@ -341,6 +369,7 @@ export function TokenPanel({ slug }: { slug: string }) {
         <TxLink id={campaign.issueTxId} label="Issue tx" />
         <TxLink id={campaign.transferTxId} label="Latest mint tx" />
         <TxLink id={campaign.freezeTxId} label="Pause tx" />
+        <TxLink id={campaign.unpauseTxId ?? null} label="Unpause tx" />
         <TxLink id={campaign.couponTxId} label="Coupon record tx" />
         <TxLink id={campaign.payoutTxId} label="Coupon HBAR tx" />
       </div>
