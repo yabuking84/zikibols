@@ -1,11 +1,13 @@
 /**
  * Settlement math for the operator desk. The raise is split once: most of it
- * goes to the founder, the remainder is the coupon pool the backers share
- * pro-rata. Amounts come from real pledge rows only — `campaign.pledgedHbar`
- * carries the Harbor / Northwind seed fixtures and must never be paid out.
+ * goes to the founder, the remainder is the pool the backers share pro-rata.
+ * Amounts come from real pledge rows only — `campaign.pledgedHbar` carries the
+ * Harbor / Northwind seed fixtures and must never be paid out. Only pledgers
+ * holding a minted ATS unit are paid; see `minted` on each backer row.
  */
-import { listPledges } from "@/lib/store";
+import { listPledges, loadCampaign } from "@/lib/store";
 import { getOperatorAccountId } from "@/lib/hts";
+import { mintMatches } from "@/lib/mints";
 
 const TINYBARS_PER_HBAR = 100_000_000;
 const MIRROR_URL =
@@ -16,7 +18,7 @@ function envNumber(raw: string | undefined, fallback: number) {
   return Number.isFinite(value) && value >= 0 ? value : fallback;
 }
 
-/** Share of the raise the founder receives; the rest is the backer coupon pool. */
+/** Share of the raise the founder receives; the rest is the backer pool. */
 export function founderPercent() {
   return Math.min(100, envNumber(process.env.PAYOUT_FOUNDER_PERCENT, 90));
 }
@@ -40,6 +42,8 @@ export type SettlementBacker = {
   hederaAccountId: string | null;
   pledgedTinybars: number;
   tinybars: number;
+  /** Holds a minted ATS unit for this campaign. Only these wallets get paid. */
+  minted: boolean;
 };
 
 export type SettlementQuote = {
@@ -76,6 +80,7 @@ function allocate(poolTinybars: number, weights: number[]) {
 
 export async function settlementQuote(slug: string): Promise<SettlementQuote> {
   const pledges = await listPledges(slug);
+  const mints = (await loadCampaign(slug))?.mints ?? [];
 
   const byWallet = new Map<string, { wallet: string; hederaAccountId: string | null; pledgedTinybars: number }>();
   for (const pledge of pledges) {
@@ -110,7 +115,11 @@ export async function settlementQuote(slug: string): Promise<SettlementQuote> {
     poolTinybars,
     founderPercent: percent,
     maxPayoutTinybars: maxPayoutTinybars(),
-    backers: rows.map((row, index) => ({ ...row, tinybars: parts[index] })),
+    backers: rows.map((row, index) => ({
+      ...row,
+      tinybars: parts[index],
+      minted: mints.some((mint) => mintMatches(mint, row.wallet, row.hederaAccountId)),
+    })),
   };
 }
 

@@ -341,8 +341,13 @@ function SettlementSection({
   busy: string | null;
   onPay: (path: string, body: Record<string, string>) => Promise<void>;
 }) {
+  const [blocked, setBlocked] = useState(false);
   const { quote, paid } = settlement;
   const path = `/api/campaigns/${slug}/payout`;
+  const unminted = quote.backers.filter(
+    (backer) => !backer.minted && backer.pledgedTinybars > 0,
+  );
+  const mintedCount = quote.backers.length - unminted.length;
 
   return (
     <div className="space-y-3 border-t border-border pt-4">
@@ -359,7 +364,8 @@ function SettlementSection({
         <>
           <p className="text-xs text-muted-foreground">
             Raised {hbarTinybars(quote.raiseTinybars)} from {quote.backers.length}{" "}
-            {quote.backers.length === 1 ? "backer" : "backers"} · founder{" "}
+            {quote.backers.length === 1 ? "backer" : "backers"} ({mintedCount} of{" "}
+            {quote.backers.length} hold a share) · founder{" "}
             {hbarTinybars(quote.founderTinybars)} ({quote.founderPercent}%) · backers{" "}
             {hbarTinybars(quote.poolTinybars)} pro-rata.
           </p>
@@ -387,7 +393,11 @@ function SettlementSection({
               variant="outline"
               loading={busy === "release-backers"}
               disabled={Boolean(busy) || Boolean(paid.backers)}
-              onClick={() => onPay(path, { action: "release-backers" })}
+              onClick={() =>
+                unminted.length > 0
+                  ? setBlocked(true)
+                  : onPay(path, { action: "release-backers" })
+              }
             >
               {busy === "release-backers"
                 ? "Paying…"
@@ -396,12 +406,89 @@ function SettlementSection({
                   : `Pay backers ${hbarTinybars(quote.poolTinybars)}`}
             </Button>
           </div>
+          {unminted.length > 0 ? (
+            <p className="text-xs text-muted-foreground">
+              Only backers holding a share are paid. Mint the remaining{" "}
+              {unminted.length} before Pay backers can run.
+            </p>
+          ) : null}
           <div className="space-y-1">
             <TxLink id={paid.founder?.txId ?? null} label="Founder payout tx" />
             <TxLink id={paid.backers?.txId ?? null} label="Backer payout tx" />
           </div>
+          {blocked ? (
+            <UnmintedBackersDialog
+              backers={unminted}
+              total={quote.backers.length}
+              onClose={() => setBlocked(false)}
+            />
+          ) : null}
         </>
       )}
+    </div>
+  );
+}
+
+/** Hard stop: backers are paid by ATS holding, so nobody is paid until all are minted. */
+function UnmintedBackersDialog({
+  backers,
+  total,
+  onClose,
+}: {
+  backers: SettlementQuote["backers"];
+  total: number;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50">
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/50"
+        aria-label="Close"
+        onClick={onClose}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="unminted-title"
+        className="relative mx-auto mt-[15vh] w-full max-w-lg rounded-xl border bg-popover p-5 shadow-lg"
+      >
+        <h4 id="unminted-title" className="text-sm font-medium">
+          Not all backers have been issued a share
+        </h4>
+        <p className="mt-2 text-xs text-muted-foreground">
+          The backer pool is paid to wallets that hold a share of this bond. These{" "}
+          {backers.length} of {total} pledged but have no share yet, so nothing has been
+          paid out. Mint a share to each of them above, then run Pay backers again.
+        </p>
+        <ul className="mt-3 max-h-56 space-y-2 overflow-auto">
+          {backers.map((backer) => (
+            <li
+              key={backer.wallet}
+              className="rounded-lg border border-border px-3 py-2"
+            >
+              <p className="font-mono text-xs">{shortAddress(backer.wallet)}</p>
+              <p className="text-xs text-muted-foreground">
+                Pledged {hbarTinybars(backer.pledgedTinybars)}
+                {backer.hederaAccountId ? ` · ${backer.hederaAccountId}` : ""}
+              </p>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-4 flex justify-end">
+          <Button size="sm" variant="outline" onClick={onClose}>
+            Close
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

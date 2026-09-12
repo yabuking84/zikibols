@@ -111,6 +111,29 @@ export async function POST(
         );
       }
 
+      // Backers are paid by ATS holding, so every pledger needs a minted unit
+      // first. Refuse the whole run rather than quietly skipping people.
+      if (!founderRun) {
+        const unminted = quote.backers.filter(
+          (backer) => !backer.minted && backer.pledgedTinybars > 0,
+        );
+        if (unminted.length > 0) {
+          return NextResponse.json(
+            {
+              error:
+                "Mint a share to every backer before paying them. Still without a share: " +
+                `${unminted.length} of ${quote.backers.length}.`,
+              unminted: unminted.map((backer) => ({
+                wallet: backer.wallet,
+                accountId: backer.hederaAccountId,
+                pledgedTinybars: backer.pledgedTinybars,
+              })),
+            },
+            { status: 409 },
+          );
+        }
+      }
+
       const amount = founderRun ? quote.founderTinybars : quote.poolTinybars;
       try {
         await assertPayable(amount);
@@ -137,7 +160,7 @@ export async function POST(
 
       const recipients: { wallet: string; accountId: string | null; tinybars: number }[] = [];
       for (const backer of quote.backers) {
-        if (backer.tinybars <= 0) continue;
+        if (!backer.minted || backer.tinybars <= 0) continue;
         recipients.push({
           wallet: backer.wallet,
           accountId: backer.hederaAccountId ?? (await hederaAccountFromEvm(backer.wallet)),
@@ -146,12 +169,12 @@ export async function POST(
       }
       if (recipients.length === 0) {
         return NextResponse.json(
-          { error: "The coupon pool is too small to split. Pledge more, or raise PAYOUT_FOUNDER_PERCENT headroom." },
+          { error: "The backer pool is too small to split. Pledge more, or raise PAYOUT_FOUNDER_PERCENT headroom." },
           { status: 400 },
         );
       }
 
-      const memo = `Zikibols backer coupon ${slug}`;
+      const memo = `Zikibols backer payout ${slug}`;
       const native = recipients.filter((entry) => entry.accountId);
       const txIds: string[] = [];
       if (native.length > 0) {
