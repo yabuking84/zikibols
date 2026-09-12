@@ -15,6 +15,18 @@ services:
       HEDERA_PAY_TO_ACCOUNT: ${HEDERA_PAY_TO_ACCOUNT:-0.0.10421774}
       HEDERA_HCS_TOPIC_ID: ${HEDERA_HCS_TOPIC_ID:-0.0.10421775}
     restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/status').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
 
 volumes:
   zikibols-data:

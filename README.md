@@ -1,5 +1,7 @@
 # Zikibols
 
+## Invest & Relax
+
 A backer should be able to fund an invoice bond or harvest share without a seed phrase, without trusting a screenshot of "DeFi history," and without receiving a meme ticker.
 
 Zikibols is that product: a crowdfunding app for **tokenized real-world cashflows**, built from scratch for [ETHOnline 2026](https://ethglobal.com/events/ethonline2026). One app, three load-bearing sponsor integrations — Privy for login and the pledge, The Graph for live diligence, Hedera for paid risk notes, an HCS audit trail, and the token lifecycle.
@@ -19,7 +21,7 @@ A backer can:
 
 Two demo campaigns ship with the app; you can also **Start a campaign**. Missing keys fail on purpose — the dashboard never invents Graph, payment, or founder-search data.
 
-Plan, prize mapping, schedule, and known gaps: [PLAN.md](./PLAN.md).
+Plain-English explainer (no finance or blockchain assumed): [docs/readme-non-technical.md](./docs/readme-non-technical.md). What ATS is and can do, in the same voice: [docs/readme-ats.md](./docs/readme-ats.md). Plan, prize mapping, schedule, and known gaps: [PLAN.md](./PLAN.md).
 
 ---
 
@@ -113,7 +115,19 @@ On a VPS with Docker:
 docker compose --env-file .env.local up --build -d
 ```
 
-That mounts a named volume at `/data` for `state.json`. Harbor Credit ships with its HashScan lifecycle already in the seed catalog, so a cold start still shows the paid bond. Walk Issue → Coupon live on Northwind Farms.
+On [Fly.io](https://fly.io) (this repo’s `fly.toml` pins a 1 GB volume at `/data` and keeps one machine running):
+
+```bash
+fly launch --copy-config --no-deploy
+fly volumes create zikibols_data --size 1
+fly secrets import < .env.local
+set -a && source .env.local && set +a
+fly deploy \
+  --build-arg NEXT_PUBLIC_PRIVY_APP_ID="$NEXT_PUBLIC_PRIVY_APP_ID" \
+  --build-arg NEXT_PUBLIC_CAMPAIGN_TREASURY="$NEXT_PUBLIC_CAMPAIGN_TREASURY"
+```
+
+That mounts a named volume at `/data` for `state.json`. Harbor Credit ships with its HashScan lifecycle already in the seed catalog, so a cold start still shows the paid bond. Walk Issue → Coupon live on Northwind Farms. Add the public origin in Privy **Allowed origins**.
 
 ---
 
@@ -297,6 +311,25 @@ The operator desk issues a bond through `@hashgraph/asset-tokenization-sdk` v8 a
 Internal KYC is **on** at create (required for `deployBond` encoding), then deactivated so minting does not need a Terminal3 verifiable credential. The ATS coupon is an entitlement record, not Mass Payout; the 1000-tinybar HBAR transfer is the distribution proof.
 
 HBAR coupon still uses `@hashgraph/sdk` in `src/lib/hts.ts`. Bond issuance no longer uses `TokenCreateTransaction`.
+
+### ATS features used
+
+ATS can do much more (equity, dividends, voting, snapshots, lock, escrow, country lists, Mass Payout). Plain-language catalog: [docs/readme-ats.md](./docs/readme-ats.md). This app uses the slice below (`src/lib/ats.ts`).
+
+| Feature | What it means here | Where |
+|---|---|---|
+| **Bond** (not equity) | The campaign becomes a debt-style security (an IOU), not company shares. | `Bond.create` |
+| **Issue** | Clone an ATS diamond from the public testnet factory. | Operator desk → Issue bond |
+| **Roles** | After create, the operator gets issuer / pauser / control-list / coupon roles. | `Role.applyRoles` |
+| **Internal KYC on, then off** | KYC must be on for `deployBond` encoding; we deactivate it so minting does not need a Terminal3 credential. | `Kyc.deactivateInternalKyc` |
+| **Whitelist / control list** | Only the saved backer can receive the share. | `isWhiteList: true` + `Security.addToControlList` |
+| **Mint** | Hand out **one** unit to that backer’s Privy `0x` (or Hedera `0.0.x`). | `Security.issue` amount `1` |
+| **Pause** | Freeze all transfers — the compliance / lifecycle op. | `Security.pause` |
+| **Unpause** | Unfreeze right before writing the coupon so the diamond call can run. | `IPause.unpause` on release |
+| **Coupon record** | On-chain “this bond is due a coupon.” Not calculated yield. | `ICoupon.setCoupon` |
+| **Coupon HBAR** | Tiny payout (1000 tinybars) to the saved backer as distribution proof. Not ATS Mass Payout. | `payCoupon` in `src/lib/hts.ts` |
+
+**Not used:** equity, dividends, voting (`erc20VotesActivated: false`), partitions, clearing, lock, snapshots, stock splits, redemption, country control lists, Terminal3 KYC, ATS Mass Payout.
 
 ---
 
