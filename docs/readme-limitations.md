@@ -29,7 +29,7 @@ End to end, with play money:
 | **Log in** | Email / social via Privy. An embedded wallet is created. No seed phrase. |
 | **Pledge** | Real HBAR transfer on Hedera testnet from that wallet to the **campaign treasury**. A labeled row is written in `state.json` (`pledges`) so the progress bar knows which flyer it was for. |
 | **Operator desk** | [Issue bond](./readme-ats.md#issue-bond-and-mint-share) prints the ATS contract; [Mint share](./readme-ats.md#issue-bond-and-mint-share) hands **one** unit **per unique pledger** (a 13 ℏ pledge still mints 1, not 13); then pause. |
-| **Settlement** | **Pay founder** sends 90% of what this campaign actually raised to the wallet on the listing, and **Pay backers** splits the other 10% pro-rata among backers **holding a minted share**, in one transfer. If any pledger has no share, a modal lists them and nothing is paid. Real HBAR, real HashScan txs, capped and refused if the treasury would drop below its gas reserve. |
+| **Settlement** (this app’s word) | **Pay founder** sends 90% of what this campaign actually raised to the wallet on the listing, and **Pay backers** splits the other 10% pro-rata among backers **holding a minted share**, in one transfer. If any pledger has no share, a modal lists them and nothing is paid. Real HBAR, real HashScan txs, capped and refused if the treasury would drop below its gas reserve. This is **closing the raise**, not paying the bond back. |
 
 Missing keys fail on purpose. The dashboard does not invent Graph numbers, web hits, or payment receipts.
 
@@ -42,7 +42,8 @@ Play-money receipts (pledges, x402 fees, HCS stamps, issued bonds, mints, pause,
 ### Money
 
 - **Decide *when* the founder gets paid.** **Pay founder** exists now, but it fires when an operator clicks it. No invoice clearing, no harvest sale, no 90-day maturity gate, no goal check.
-- **Calculate a real return.** The backer split is a flat 10% of the raise handed back pro-rata. That is not yield.
+- **Redeem the bond at maturity.** A finished ATS product pays holders their **principal** when the instrument matures (invoice cleared, harvest sold, or the `maturityDate` on the bond). That event is **redemption**, not settlement. Settlement is only the plumbing: cash actually moves. This app has **no redemption step**, no maturity gate, and no later pot of money. The 10% **Pay backers** cut is a leftover of the *same* pledged jar, handed out on the same operator click as **Pay founder**. Backers do not get their pledge back.
+- **Calculate a real return.** The backer split is a flat 10% of the raise handed back pro-rata. That is not yield, and it is not the principal repayment.
 - **Pay out more than the cap.** Each payout refuses above `PAYOUT_MAX_HBAR` (100 ℏ) and refuses to take the treasury below `PAYOUT_RESERVE_HBAR` (50 ℏ), because that same jar pays the robot’s x402 fees and ATS gas. A 12,000 ℏ raise cannot actually be settled here.
 - **One jar per campaign.** All listings share `NEXT_PUBLIC_CAMPAIGN_TREASURY`. Hedera does not know “this 50 ℏ was for the bike frame.” The `campaignSlug` on the clipboard does — so if you delete the clipboard before settling, the split is gone even though the coins are not.
 - **Mint one share per HBAR pledged.** A 13 ℏ pledge still mints **1** unit, not 13. Each unique pledger can get one certificate of the same bond; Alice who sent 13 ℏ and Bob who sent 50 ℏ both hold 1. How much they sent stays on the HashScan pledge tx and in `pledges`, not on the share balance. ATS can mint *N* units for *N* ℏ; we do not. See [One bond, many holders](./readme-ats.md#one-bond-many-holders--what-ats-can-do-vs-what-we-do).
@@ -55,7 +56,8 @@ ATS **can** do more than this app uses. This prototype is not “ATS cannot pay.
 |---|---|
 | Coupon to **bond holders** | **Not used** on the desk |
 | **Mass Payout** (many holders at once) | **Not used** |
-| Dividend, voting, redemption, escrow, country lists, full KYC website | **Not used** |
+| **Redemption** (principal back at maturity) | **Not included.** There is no “pay the bond back” button, no maturity date check, and no later cash from the invoice or harvest. What the desk calls **Settlement** is emptying the pledge jar (90 / 10), which a finished product would call **closing**, not redemption. |
+| Dividend, voting, escrow, country lists, full KYC website | **Not used** |
 | Store the Kickstarter page (story, city, who pledged) | **No.** ATS holds the **certificate**, not the flyer |
 | Empty the pledge jar into the **founder’s** pocket | **Not an ATS job.** We do it ourselves: a plain treasury → founder HBAR transfer on **Pay founder** |
 
@@ -114,8 +116,8 @@ It is a local JSON clipboard, not a database, not ATS, not a per-campaign on-cha
 2. A robot does **homework** (Graph + web). The shop pays for the pamphlet. A notary **stamps a fingerprint** (HCS).
 3. Customers put coins in **one office tin** (treasury). Someone writes names on a **clipboard** (which flyer).
 4. The office **prints one locked IOU** (ATS), hands **one** copy to each named customer (not one sheet per coin they put in), and freezes it.
-5. The office **counts this flyer’s coins**: most go to the baker’s pocket, the rest go back to the customers in proportion to what each put in.
-6. Nobody checks whether the bread was ever baked. The office just decides it is time.
+5. The office **counts this flyer’s coins**: most go to the baker’s pocket, the rest go back to the customers in proportion to what each put in. That is closing the tin, not paying the IOU back later.
+6. Nobody checks whether the bread was ever baked. There is no second payday when the invoice clears or the crop sells (**redemption**). The office just decides it is time.
 
 ---
 
@@ -123,7 +125,8 @@ It is a local JSON clipboard, not a database, not ATS, not a per-campaign on-cha
 
 Not an exhaustive product spec — the holes this demo leaves obvious:
 
-- A **reason** to settle: goal reached, invoice cleared, harvest sold — not an operator clicking **Pay founder**
+- A **reason** to close the raise: goal reached — not an operator clicking **Pay founder**
+- **Redemption at maturity:** a later event (invoice cleared, harvest sold, or the bond’s `maturityDate`) that pays holders their principal — plus coupons along the way. ATS already has Redemption, Coupon, snapshot, and Mass Payout; this app does not wire them. Do not read **Settlement** on the desk as that payout.
 - One treasury (or sub-account) **per** campaign, or an on-chain memo that Hedera can score without the clipboard
 - Persist listings and diligence somewhere that survives deleting `state.json` and closing the tab
 - Cap / charge **Check this creator** so the agent pocket cannot be drained
