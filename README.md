@@ -1,5 +1,7 @@
 # Zikibols
 
+## Invest & Relax
+
 A backer should be able to fund an invoice bond or harvest share without a seed phrase, without trusting a screenshot of "DeFi history," and without receiving a meme ticker.
 
 Zikibols is that product: a crowdfunding app for **tokenized real-world cashflows**, built from scratch for [ETHOnline 2026](https://ethglobal.com/events/ethonline2026). One app, three load-bearing sponsor integrations — Privy for login and the pledge, The Graph for live diligence, Hedera for paid risk notes, an HCS audit trail, and the token lifecycle.
@@ -19,7 +21,7 @@ A backer can:
 
 Two demo campaigns ship with the app; you can also **Start a campaign**. Missing keys fail on purpose — the dashboard never invents Graph, payment, or founder-search data.
 
-Plan, prize mapping, schedule, and known gaps: [PLAN.md](./PLAN.md).
+Plain-English explainer (no finance or blockchain assumed): [docs/readme-non-technical.md](./docs/readme-non-technical.md). What ATS is and can do, in the same voice: [docs/readme-ats.md](./docs/readme-ats.md). Plan, prize mapping, schedule, and known gaps: [PLAN.md](./PLAN.md).
 
 ---
 

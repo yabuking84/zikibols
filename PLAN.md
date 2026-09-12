@@ -342,7 +342,7 @@ Deadline **Sun 13 Sep, 12:00 EDT / 20:00 GST**. Code freeze Friday night; Saturd
 ### Thu 10 Sep — token layer and deploy
 
 - [x] If go: `src/lib/ats.ts`, token/payout routes, token panel copy, `.env.example`. If no-go: label seed totals, handle pending airdrop (mirror check, fall back to pause).
-- [ ] Deploy to a host with a writable disk. `Dockerfile` + `docker-compose.yml` + `fly.toml` are in the repo; the image chowns `/data` at start so a Fly/Docker volume is writable. Copy env; pass `NEXT_PUBLIC_*` as build args; add the origin in Privy; smoke test Check → Pledge. CI workflow is local until the next commit/push.
+- [ ] Deploy to a host with a writable disk. `Dockerfile` + `docker-compose.yml` + `fly.toml` are in the repo; the image chowns `/data` at start so a Fly/Docker volume is writable. Copy env; pass `NEXT_PUBLIC_*` as build args; add the origin in Privy; smoke test Check → Pledge. CI runs on `main`, `rc/**`, and pull requests.
 - [x] README: AI tools used; Privy UX paragraph; 402 `curl`; two-payment flow; HCS extra point; standards-leverage paragraph; From-scratch statement; ATS section.
 
 ### Fri 11 Sep — rehearsal and freeze
