@@ -1,6 +1,6 @@
 # What this app can and cannot do
 
-This note is for anyone who has **no finance or blockchain background**. It states the prototype honestly: the **story** vs the **machine**.
+This note states the prototype honestly: the **story** vs the **machine**.
 
 The app explainer is [readme-non-technical.md](./readme-non-technical.md). How the whole app flows: [readme-flow.md](./readme-flow.md). Check this creator: [readme-creator-lookup.md](./readme-creator-lookup.md). ATS workshop: [readme-ats.md](./readme-ats.md). Technical README: [README.md](../README.md).
 

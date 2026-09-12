@@ -1,6 +1,6 @@
 # Asset Tokenization Studio (ATS), in plain English
 
-This note is for anyone who has **little finance or blockchain knowledge**. It explains what ATS is, why it is called a “studio,” and what it can do.
+This note explains what ATS is, why it is called a “studio,” and what it can do.
 
 The app explainer is [readme-non-technical.md](./readme-non-technical.md). How the whole app flows: [readme-flow.md](./readme-flow.md). The technical README is [README.md](../README.md).
 
@@ -156,7 +156,7 @@ A small slice:
 | Issue a bond | Yes — **[Issue bond](#issue-bond-and-mint-share)** |
 | Mint to someone | Yes — **[Mint share](#issue-bond-and-mint-share)** — **one** unit **per unique pledger** |
 | Allowed list | Yes — backer is put on the list before mint |
-| Pause | Yes — **Pause / control list** |
+| Pause | Yes — **Pause bond** (whole bond). Allowed list is per mint. |
 | Coupon | Yes — write “coupon due,” then send a tiny payout |
 | Mass Payout (many holders at once) | **Not used.** **Pay founder** / **Pay backers** are ordinary HBAR sends from the treasury (`src/lib/settlement.ts`) |
 | Dividends, voting, splits, KYC website, escrow, full cap… | No, not in this demo |
@@ -212,7 +212,7 @@ What it does **not** do:
 
 1. **Issue bond** — print the official form on Hedera.
 2. **Mint share** — one click per unique pledger (or an extra address).
-3. **Pause / control list** — stamp “cannot be freely sold.” Puts every minted holder on the allowed list, then pauses.
+3. **Pause bond** — stamp “cannot be freely sold” on the whole bond. Each **Mint share** already put that backer on the allowed list.
 
 ---
 

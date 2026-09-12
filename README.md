@@ -21,7 +21,7 @@ A backer can:
 
 Two demo campaigns ship with the app; you can also **Start a campaign**. Missing keys fail on purpose — the dashboard never invents Graph, payment, or founder-search data.
 
-Plain-English explainer (no finance or blockchain assumed): [docs/readme-non-technical.md](./docs/readme-non-technical.md). How the whole app flows (diagrams): [docs/readme-flow.md](./docs/readme-flow.md). What **Check this creator** does, step by step: [docs/readme-creator-lookup.md](./docs/readme-creator-lookup.md). What ATS is and can do, in the same voice: [docs/readme-ats.md](./docs/readme-ats.md). What this prototype **can and cannot** do: [docs/readme-limitations.md](./docs/readme-limitations.md). Plan, prize mapping, schedule, and known gaps: [PLAN.md](./PLAN.md).
+How the app works: [docs/readme-non-technical.md](./docs/readme-non-technical.md). How the whole app flows (diagrams): [docs/readme-flow.md](./docs/readme-flow.md). What **Check this creator** does, step by step: [docs/readme-creator-lookup.md](./docs/readme-creator-lookup.md). What ATS is and can do: [docs/readme-ats.md](./docs/readme-ats.md). What this prototype **can and cannot** do: [docs/readme-limitations.md](./docs/readme-limitations.md). Plan, prize mapping, schedule, and known gaps: [PLAN.md](./PLAN.md).
 
 ---
 
@@ -295,7 +295,7 @@ Token issue / pause / coupon are **not** on this page. Those live on the Operato
 1. Open **Operator desk** in the sidebar, or go to `/campaigns/<slug>/operate`.
 2. **Issue bond** — deploys an ATS diamond clone on Hedera testnet (factory `0.0.9213391`). You get a contract id and HashScan link.
 3. **Mint share** — one unit per unique pledger (whitelist first). Repeat for each wallet. **Mint to another address** covers a `0x` / `0.0.x` that is not on the pledge list.
-4. **Pause / control list** — pauses the bond (compliance control). Minted holders are put on the whitelist.
+4. **Pause bond** — pauses the whole bond (compliance control). Each mint already put that backer on the whitelist.
 6. **Approve as founder** — log in with Privy and click once. This is founder 1.
 7. **Co-sign as treasury** — operator click. This is founder 2.
 8. **Release coupon** — enabled only after both approvals **and** the bond is paused. Writes an ATS coupon record, then sends a small HBAR coupon to the backer. HashScan links appear for both.

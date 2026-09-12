@@ -1,6 +1,6 @@
 # Zikibols in plain English
 
-This note is for anyone who has **no finance or blockchain background**. It explains what the app does without assuming you know tokens, wallets, or investment jargon.
+This note explains what the app does.
 
 The technical README is in [README.md](../README.md). This file is the simple version. Flow charts of the whole app: [readme-flow.md](./readme-flow.md).
 
