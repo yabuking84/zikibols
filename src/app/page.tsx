@@ -68,7 +68,10 @@ export default async function Home() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-muted-foreground">
-          Back tokenized campaigns. An agent checks the creator on-chain first.
+          Back tokenized campaigns. An agent checks the creator on-chain first.{" "}
+          <Link href="/docs" className="font-medium text-foreground underline-offset-4 hover:underline">
+            Read the docs
+          </Link>
         </p>
       </div>
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

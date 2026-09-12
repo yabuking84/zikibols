@@ -7,7 +7,7 @@ export default function NotFound() {
       <p className="text-sm text-muted-foreground">404</p>
       <h1 className="text-2xl font-bold tracking-tight">Page not found</h1>
       <p className="text-muted-foreground">
-        That route is not a campaign or dashboard page.
+        That route is not a campaign, docs, or dashboard page.
       </p>
       <Link href="/" className={`${buttonVariants()} w-fit`}>
         Back to dashboard

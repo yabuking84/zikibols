@@ -31,6 +31,13 @@ export function CommandSearch() {
     const needle = query.trim().toLowerCase();
     const pages = [
       { href: "/", title: "Dashboard", hint: "Overview and live campaigns" },
+      { href: "/docs", title: "Docs", hint: "README notes in the app" },
+      { href: "/docs/overview", title: "Overview", hint: "Technical README and tracks" },
+      { href: "/docs/how-it-works", title: "How it works", hint: "Plain-English product note" },
+      { href: "/docs/flow", title: "How the app flows", hint: "Maps from listing to settlement" },
+      { href: "/docs/creator-lookup", title: "Check this creator", hint: "What the diligence button does" },
+      { href: "/docs/ats", title: "ATS", hint: "Asset Tokenization Studio" },
+      { href: "/docs/limitations", title: "Limits", hint: "What this prototype can and cannot do" },
       { href: "/campaigns/new", title: "Start a campaign", hint: "Tokenize an invoice or harvest share" },
       ...campaigns.flatMap((campaign) => [
         {

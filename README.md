@@ -21,7 +21,7 @@ A backer can:
 
 Two demo campaigns ship with the app; you can also **Start a campaign**. Missing keys fail on purpose — the dashboard never invents Graph, payment, or founder-search data.
 
-How the app works: [README-non-technical.md](./README-non-technical.md). How the whole app flows (diagrams): [README-flow.md](./README-flow.md). What **Check this creator** does, step by step: [README-creator-lookup.md](./README-creator-lookup.md). What ATS is and can do: [README-ats.md](./README-ats.md). What this prototype **can and cannot** do: [README-limitations.md](./README-limitations.md). Plan, prize mapping, schedule, and known gaps: [PLAN.md](./PLAN.md).
+How the app works: [README-non-technical.md](./README-non-technical.md). How the whole app flows (diagrams): [README-flow.md](./README-flow.md). What **Check this creator** does, step by step: [README-creator-lookup.md](./README-creator-lookup.md). What ATS is and can do: [README-ats.md](./README-ats.md). What this prototype **can and cannot** do: [README-limitations.md](./README-limitations.md). Plan, prize mapping, schedule, and known gaps: [PLAN.md](./PLAN.md). The same notes are in the app at [`/docs`](/docs).
 
 ---
 

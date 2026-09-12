@@ -8,6 +8,7 @@ primary_region = "iad"
   dockerfile = "Dockerfile"
 
 [build.args]
+  NEXT_PUBLIC_PRIVY_APP_ID = "cmtslgrsc009k0bjo1acmxw8t"
   NEXT_PUBLIC_CAMPAIGN_TREASURY = "0x7d5710637321f540b9ee8e1282c598d9b78f4f91"
 
 [env]

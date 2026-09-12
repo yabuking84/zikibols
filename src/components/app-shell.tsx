@@ -5,6 +5,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
+  BookOpen,
   Check,
   Command,
   Copy,
@@ -17,6 +18,7 @@ import {
 } from "lucide-react";
 import { CommandSearch } from "@/components/command-search";
 import { useCatalog } from "@/components/use-catalog";
+import { DOC_PAGES } from "@/lib/docs";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -28,6 +30,7 @@ import { useHbarBalance } from "@/components/use-hbar-balance";
 
 const generalNav = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/docs", label: "Docs", icon: BookOpen },
 ];
 
 const LOGO = {
@@ -101,7 +104,11 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
             <NavLink
               key={item.label}
               {...item}
-              active={pathname === item.href}
+              active={
+                item.href === "/docs"
+                  ? pathname === "/docs" || pathname.startsWith("/docs/")
+                  : pathname === item.href
+              }
               onClick={onNavigate}
             />
           ))}
@@ -258,6 +265,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const campaigns = useCatalog();
   const creating = pathname === "/campaigns/new";
+  const docsIndex = pathname === "/docs";
+  const docsPage = DOC_PAGES.find((page) => pathname === `/docs/${page.slug}`);
   const campaign = campaigns.find(
     (item) =>
       pathname === `/campaigns/${item.slug}` ||
@@ -308,7 +317,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 href="/"
                 className={cn(
                   "truncate font-medium",
-                  campaign || creating
+                  campaign || creating || docsIndex || docsPage
                     ? "text-muted-foreground hover:text-foreground"
                     : "text-foreground",
                 )}
@@ -319,6 +328,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <>
                   <span className="text-muted-foreground">/</span>
                   <span className="truncate font-medium">New campaign</span>
+                </>
+              ) : null}
+              {docsIndex || docsPage ? (
+                <>
+                  <span className="text-muted-foreground">/</span>
+                  {docsPage ? (
+                    <Link
+                      href="/docs"
+                      className="truncate font-medium text-muted-foreground hover:text-foreground"
+                    >
+                      Docs
+                    </Link>
+                  ) : (
+                    <span className="truncate font-medium">Docs</span>
+                  )}
+                </>
+              ) : null}
+              {docsPage ? (
+                <>
+                  <span className="text-muted-foreground">/</span>
+                  <span className="truncate font-medium">{docsPage.title}</span>
                 </>
               ) : null}
               {campaign ? (
