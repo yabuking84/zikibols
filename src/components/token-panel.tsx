@@ -8,10 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Campaign, TokenLifecycle } from "@/lib/campaigns";
 import type { CampaignSettlement } from "@/lib/types";
+import type { MintHolder } from "@/lib/mints";
 import type { SettlementQuote } from "@/lib/settlement";
 import { hashscanAccountUrl, hashscanContractUrl, hashscanTxUrl } from "@/lib/hedera";
 import { HashScanAccount } from "@/components/hashscan-account";
-import { hbarTinybars, shortAddress } from "@/lib/money";
+import { hbar, hbarTinybars, shortAddress } from "@/lib/money";
 
 type Snapshot = {
   campaign: Campaign;
@@ -20,11 +21,7 @@ type Snapshot = {
   operatorConfigured: boolean;
   settlement: { quote: SettlementQuote; paid: CampaignSettlement };
   backerAccountId: string | null;
-  suggestedBacker: {
-    wallet: string;
-    accountId: string | null;
-    txHash: string | null;
-  } | null;
+  holders: MintHolder[];
 };
 
 const LIFECYCLE_LABEL: Record<TokenLifecycle, string> = {
@@ -34,6 +31,29 @@ const LIFECYCLE_LABEL: Record<TokenLifecycle, string> = {
   frozen: "Paused",
   paid: "Coupon paid",
 };
+
+/** Issue / mint / pause talk to Hedera; 30–60s is normal. Abort so the desk does not spin forever. */
+const ATS_WAIT_MS = 70_000;
+
+function isAlreadyOnControlList(message: string) {
+  return /already in the control list|20013/i.test(message);
+}
+
+function formatAtsError(action: string | undefined, raw: string) {
+  if (isAlreadyOnControlList(raw)) {
+    return "This backer is already on the allowed list. Refresh the desk — their share may have minted, or mint the next pledger.";
+  }
+  if (/timeout|aborted|abort/i.test(raw)) {
+    if (action === "issue") {
+      return "Issue bond timed out waiting on Hedera. Refresh the desk and check HashScan before clicking Issue again.";
+    }
+    if (action === "transfer") {
+      return "Mint share timed out waiting on Hedera. Refresh the desk and check HashScan before clicking Mint again.";
+    }
+    return "Hedera timed out. Refresh the desk — the transaction may still have landed.";
+  }
+  return raw;
+}
 
 function TxLink({ id, label }: { id: string | null; label: string }) {
   if (!id) return null;
@@ -60,7 +80,6 @@ export function TokenPanel({ slug }: { slug: string }) {
     const json = (await response.json()) as Snapshot & { error?: string };
     if (!response.ok) throw new Error(json.error ?? "Failed to load campaign");
     setData(json);
-    if (json.backerAccountId) setBackerDraft(json.backerAccountId);
   }, [slug]);
 
   useEffect(() => {
@@ -69,21 +88,35 @@ export function TokenPanel({ slug }: { slug: string }) {
     });
   }, [refresh]);
 
-  async function post(path: string, body: Record<string, string>) {
-    setBusy(body.action);
+  async function post(path: string, body: Record<string, string>, busyKey = body.action) {
+    setBusy(busyKey);
     setError(null);
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), ATS_WAIT_MS);
     try {
       const response = await fetch(path, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
+        signal: controller.signal,
       });
       const json = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(json.error ?? "Request failed");
+      setBusy(null);
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Request failed");
+      const raw =
+        err instanceof DOMException && err.name === "AbortError"
+          ? "timeout"
+          : err instanceof Error
+            ? err.message
+            : "Request failed";
+      setError(formatAtsError(body.action, raw));
+      if (body.action === "issue" || body.action === "transfer") {
+        await refresh().catch(() => undefined);
+      }
     } finally {
+      window.clearTimeout(timer);
       setBusy(null);
     }
   }
@@ -99,23 +132,25 @@ export function TokenPanel({ slug }: { slug: string }) {
     operatorConfigured,
     settlement,
     backerAccountId,
-    suggestedBacker,
+    holders,
   } = data;
   const lifecycle = campaign.tokenLifecycle;
+  const mintedCount = holders.filter((holder) => holder.mint).length;
+  const pendingCount = holders.filter((holder) => !holder.mint).length;
   const canIssue = lifecycle === "draft" && operatorConfigured;
-  const canTransfer = lifecycle === "issued" && Boolean(backerAccountId);
-  const canFreeze =
-    lifecycle === "transferred" || (lifecycle === "issued" && !backerAccountId);
+  const canMint =
+    operatorConfigured && (lifecycle === "issued" || lifecycle === "transferred");
+  const canFreeze = lifecycle === "issued" || lifecycle === "transferred";
   const canApprove = lifecycle === "transferred" || lifecycle === "frozen";
   const canRelease = payoutReady && lifecycle === "frozen";
   const nextStep =
     lifecycle === "draft"
       ? "Next: issue the ATS bond."
-      : lifecycle === "issued" && backerAccountId
-        ? "Next: mint one share to the backer."
-        : lifecycle === "issued"
-          ? "Next: pause the bond, or save a backer 0x / 0.0.x to mint first."
-          : lifecycle === "transferred"
+      : lifecycle === "issued" && holders.length === 0
+        ? "Next: wait for a pledge, or mint to an address below."
+        : (lifecycle === "issued" || lifecycle === "transferred") && pendingCount > 0
+          ? `Next: mint a share to each pledger (${mintedCount} of ${holders.length} done).`
+          : lifecycle === "transferred" || lifecycle === "issued"
             ? "Next: pause the bond (compliance control)."
             : lifecycle === "frozen"
               ? "Next: both founders sign, then release the coupon."
@@ -150,85 +185,6 @@ export function TokenPanel({ slug }: { slug: string }) {
           No bond contract yet — Issue bond to get a HashScan id.
         </p>
       )}
-      <div className="space-y-1.5">
-        <Label htmlFor="backer-account">Backer address</Label>
-        <div className="flex flex-wrap gap-2">
-          <Input
-            id="backer-account"
-            value={backerDraft}
-            onChange={(event) => setBackerDraft(event.target.value)}
-            placeholder="0x… or 0.0.12345"
-            className="min-w-48 flex-1 font-mono"
-            disabled={lifecycle !== "draft" && lifecycle !== "issued"}
-          />
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={
-              Boolean(busy) ||
-              (lifecycle !== "draft" && lifecycle !== "issued")
-            }
-            onClick={() =>
-              post(`/api/campaigns/${slug}/token`, {
-                action: "set-backer",
-                accountId: backerDraft,
-              })
-            }
-          >
-            {busy === "set-backer" ? "Saving…" : "Save backer"}
-          </Button>
-        </div>
-        {suggestedBacker ? (
-          <p className="text-xs text-muted-foreground">
-            Latest Privy pledger {shortAddress(suggestedBacker.wallet)}
-            {suggestedBacker.accountId
-              ? ` maps to ${suggestedBacker.accountId}`
-              : " — mint goes to this 0x address"}
-            .
-            {(suggestedBacker.accountId && suggestedBacker.accountId !== backerAccountId) ||
-            suggestedBacker.wallet.toLowerCase() !== (backerAccountId ?? "").toLowerCase() ? (
-              <>
-                {" "}
-                <button
-                  type="button"
-                  className="text-primary underline-offset-4 hover:underline"
-                  disabled={
-                    Boolean(busy) ||
-                    (lifecycle !== "draft" && lifecycle !== "issued")
-                  }
-                  onClick={() => {
-                    const accountId = suggestedBacker.accountId ?? suggestedBacker.wallet;
-                    if (!accountId) return;
-                    setBackerDraft(accountId);
-                    post(`/api/campaigns/${slug}/token`, {
-                      action: "set-backer",
-                      accountId,
-                    }).catch(() => undefined);
-                  }}
-                >
-                  Use this address
-                </button>
-              </>
-            ) : null}
-          </p>
-        ) : (
-          <p className="text-xs text-muted-foreground">
-            Mint one share here, then pause the bond. After a Privy pledge, this desk
-            can use that wallet directly — no Hedera 0.0.x mapping required. Env
-            HEDERA_BACKER_ACCOUNT_ID still works as a fallback.
-          </p>
-        )}
-        {backerAccountId ? (
-          <a
-            className="inline-block font-mono text-xs text-primary underline-offset-4 hover:underline"
-            href={hashscanAccountUrl(backerAccountId)}
-            target="_blank"
-            rel="noreferrer"
-          >
-            {backerAccountId} on HashScan
-          </a>
-        ) : null}
-      </div>
       <div className="flex flex-wrap gap-2">
         <Button
           size="sm"
@@ -240,34 +196,139 @@ export function TokenPanel({ slug }: { slug: string }) {
         <Button
           size="sm"
           variant="outline"
-          disabled={Boolean(busy) || !canTransfer}
-          onClick={() => post(`/api/campaigns/${slug}/token`, { action: "transfer" })}
-        >
-          {busy === "transfer" ? "Minting…" : "Mint share"}
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
           disabled={Boolean(busy) || !canFreeze}
           onClick={() => post(`/api/campaigns/${slug}/token`, { action: "freeze" })}
         >
           {busy === "freeze" ? "Pausing…" : "Pause / control list"}
         </Button>
       </div>
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-medium">Mint shares</h3>
+          <Badge variant="secondary">
+            {mintedCount}/{holders.length || 0} minted
+          </Badge>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          One ATS unit per unique pledger of this same bond. Each mint takes 30–60
+          seconds. The tiny coupon crumb still goes to the first minted address.
+        </p>
+        {holders.length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            No live pledges yet. After someone pledges they appear here, or mint to
+            another address below.
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {holders.map((holder) => {
+              const target = holder.accountId ?? holder.wallet;
+              const rowBusy = busy === `transfer:${target}`;
+              return (
+                <li
+                  key={holder.wallet}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2"
+                >
+                  <div className="min-w-0 space-y-0.5">
+                    <p className="font-mono text-xs">{shortAddress(holder.wallet)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {holder.pledgedHbar > 0
+                        ? `Pledged ${hbar(holder.pledgedHbar)}`
+                        : "Minted without a pledge row"}
+                      {holder.accountId ? ` · ${holder.accountId}` : ""}
+                    </p>
+                    {holder.mint ? (
+                      <TxLink id={holder.mint.txId} label="Mint tx" />
+                    ) : null}
+                  </div>
+                  {holder.mint ? (
+                    <Badge variant="secondary">Minted</Badge>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={Boolean(busy) || !canMint || !target}
+                      onClick={() =>
+                        post(
+                          `/api/campaigns/${slug}/token`,
+                          {
+                            action: "transfer",
+                            accountId: target,
+                            wallet: holder.wallet,
+                          },
+                          `transfer:${target}`,
+                        )
+                      }
+                    >
+                      {rowBusy ? "Minting…" : "Mint share"}
+                    </Button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        <div className="space-y-1.5">
+          <Label htmlFor="backer-account">Mint to another address</Label>
+          <div className="flex flex-wrap gap-2">
+            <Input
+              id="backer-account"
+              value={backerDraft}
+              onChange={(event) => setBackerDraft(event.target.value)}
+              placeholder="0x… or 0.0.12345"
+              className="min-w-48 flex-1 font-mono"
+              disabled={!canMint}
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={Boolean(busy) || !canMint || !backerDraft.trim()}
+              onClick={() =>
+                post(
+                  `/api/campaigns/${slug}/token`,
+                  {
+                    action: "transfer",
+                    accountId: backerDraft.trim(),
+                    wallet: backerDraft.trim(),
+                  },
+                  `transfer:${backerDraft.trim()}`,
+                )
+              }
+            >
+              {busy?.startsWith("transfer:") && busy === `transfer:${backerDraft.trim()}`
+                ? "Minting…"
+                : "Mint share"}
+            </Button>
+          </div>
+        </div>
+        {backerAccountId ? (
+          <p className="text-xs text-muted-foreground">
+            Coupon crumb recipient{" "}
+            <a
+              className="font-mono text-primary underline-offset-4 hover:underline"
+              href={hashscanAccountUrl(backerAccountId)}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {backerAccountId}
+            </a>
+          </p>
+        ) : null}
+      </div>
+      {busy === "issue" || busy?.startsWith("transfer:") || busy === "freeze" ? (
+        <p className="text-xs text-muted-foreground">
+          Waiting on Hedera. Issue and mint often take 30–60 seconds. Do not click
+          again — if this fails, the error will show here.
+        </p>
+      ) : null}
       {!operatorConfigured ? (
         <p className="text-xs text-muted-foreground">
           Set HEDERA_OPERATOR_ACCOUNT_ID and HEDERA_OPERATOR_PRIVATE_KEY (or the
           HEDERA_AGENT_* pair) to issue on testnet.
         </p>
       ) : null}
-      {!backerAccountId ? (
-        <p className="text-xs text-muted-foreground">
-          Without a backer address, Pause still pauses the whole bond.
-        </p>
-      ) : null}
       <div className="space-y-1">
         <TxLink id={campaign.issueTxId} label="Issue tx" />
-        <TxLink id={campaign.transferTxId} label="Mint tx" />
+        <TxLink id={campaign.transferTxId} label="Latest mint tx" />
         <TxLink id={campaign.freezeTxId} label="Pause tx" />
         <TxLink id={campaign.couponTxId} label="Coupon record tx" />
         <TxLink id={campaign.payoutTxId} label="Coupon HBAR tx" />

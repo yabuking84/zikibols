@@ -1,3 +1,5 @@
+import type { ShareMint } from "@/lib/types";
+
 export type AssetClass = "invoice-receivable" | "revenue-share";
 
 export type TokenLifecycle =
@@ -31,6 +33,7 @@ export type Campaign = {
   payoutTxId: string | null;
   couponTxId: string | null;
   backerAccountId: string | null;
+  mints: ShareMint[];
   treasuryEvm: `0x${string}`;
   imageHue: string;
 };
@@ -62,6 +65,14 @@ export const campaigns: Campaign[] = [
     payoutTxId: "0.0.10418801@1788882136.867281572",
     couponTxId: "0x35fd434f02a91089f878fa70848c7fa29a87afd63ae9bc52b98733cceb29c1ad",
     backerAccountId: "0x7d5710637321f540b9ee8e1282c598d9b78f4f91",
+    mints: [
+      {
+        wallet: "0x7d5710637321f540b9ee8e1282c598d9b78f4f91",
+        accountId: "0x7d5710637321f540b9ee8e1282c598d9b78f4f91",
+        txId: "0x3649110d7566cec1790e7cbc6f28ea93f17b649eced7083c3f5ab0fc11f6dc6a",
+        at: "",
+      },
+    ],
     treasuryEvm: "0x7d5710637321f540b9ee8e1282c598d9b78f4f91",
     imageHue: "32 42% 42%",
   },
@@ -91,6 +102,7 @@ export const campaigns: Campaign[] = [
     payoutTxId: null,
     couponTxId: null,
     backerAccountId: null,
+    mints: [],
     treasuryEvm: "0x7d5710637321f540b9ee8e1282c598d9b78f4f91",
     imageHue: "152 28% 32%",
   },

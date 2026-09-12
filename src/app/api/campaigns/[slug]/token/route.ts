@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export const maxDuration = 60;
-import { loadCampaign, patchCampaign } from "@/lib/store";
+import { loadCampaign, patchCampaign, recordShareMint } from "@/lib/store";
 import { getBackerAccountId } from "@/lib/hts";
 import {
   controlListBacker,
@@ -10,6 +10,16 @@ import {
   mintToBacker,
   pauseBond,
 } from "@/lib/ats";
+import { alreadyMinted } from "@/lib/mints";
+
+function errorText(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  if (error && typeof error === "object" && "message" in error) {
+    return String((error as { message: unknown }).message);
+  }
+  return "";
+}
 
 export async function POST(
   request: NextRequest,
@@ -21,13 +31,17 @@ export async function POST(
     return NextResponse.json({ error: "Unknown campaign" }, { status: 404 });
   }
 
-  const body = (await request.json()) as { action?: string; accountId?: string };
+  const body = (await request.json()) as {
+    action?: string;
+    accountId?: string;
+    wallet?: string;
+  };
 
   try {
     if (body.action === "set-backer") {
-      if (campaign.tokenLifecycle !== "draft" && campaign.tokenLifecycle !== "issued") {
+      if (campaign.tokenLifecycle === "frozen" || campaign.tokenLifecycle === "paid") {
         return NextResponse.json(
-          { error: "Backer can only be set before the share is minted." },
+          { error: "Coupon recipient is locked after the bond is paused." },
           { status: 400 },
         );
       }
@@ -56,15 +70,24 @@ export async function POST(
     }
 
     if (body.action === "transfer") {
-      if (campaign.tokenLifecycle !== "issued") {
-        return NextResponse.json({ error: "Issue the ATS bond first" }, { status: 400 });
-      }
-      const recipient = campaign.backerAccountId || getBackerAccountId();
-      if (!recipient) {
+      if (campaign.tokenLifecycle !== "issued" && campaign.tokenLifecycle !== "transferred") {
         return NextResponse.json(
           {
             error:
-              "Set a backer Privy address (or Hedera 0.0.x / HEDERA_BACKER_ACCOUNT_ID) to mint one share.",
+              campaign.tokenLifecycle === "draft"
+                ? "Issue the ATS bond first"
+                : "Minting is closed after the bond is paused.",
+          },
+          { status: 400 },
+        );
+      }
+      const recipient =
+        body.accountId?.trim() || campaign.backerAccountId || getBackerAccountId() || "";
+      if (!isBackerId(recipient)) {
+        return NextResponse.json(
+          {
+            error:
+              "Pick a pledger, or type a Privy 0x / Hedera 0.0.x, to mint one share.",
           },
           { status: 400 },
         );
@@ -72,42 +95,52 @@ export async function POST(
       if (!campaign.tokenId) {
         return NextResponse.json({ error: "Issue the ATS bond first" }, { status: 400 });
       }
+      if (alreadyMinted(campaign.mints, recipient, body.wallet)) {
+        return NextResponse.json(
+          { error: "This backer already has a share. Mint to another pledger." },
+          { status: 400 },
+        );
+      }
       const transferred = await mintToBacker(campaign.tokenId, recipient);
-      const updated = await patchCampaign(slug, {
-        tokenLifecycle: "transferred",
-        transferTxId: transferred.transactionId,
-        backerAccountId: recipient,
-      });
-      return NextResponse.json({ campaign: updated, ...transferred });
+      const mint = {
+        wallet: body.wallet?.trim() || recipient,
+        accountId: recipient,
+        txId: transferred.transactionId,
+        at: new Date().toISOString(),
+      };
+      const updated = await recordShareMint(slug, mint);
+      return NextResponse.json({ campaign: updated, ...transferred, mint });
     }
 
     if (body.action === "freeze") {
-      const holder = campaign.backerAccountId || getBackerAccountId() || "";
+      const holders = [
+        ...campaign.mints.map((mint) => mint.accountId),
+        campaign.backerAccountId || getBackerAccountId() || "",
+      ].filter(Boolean);
+      const unique = [...new Set(holders)];
       const canFreeze =
         campaign.tokenLifecycle === "transferred" ||
-        (campaign.tokenLifecycle === "issued" && !holder);
+        campaign.tokenLifecycle === "issued";
       if (!canFreeze) {
         return NextResponse.json(
-          { error: "Mint a share first, or pause immediately after issue if there is no backer." },
+          { error: "Issue the ATS bond first, then pause it." },
           { status: 400 },
         );
       }
       if (!campaign.tokenId) {
         return NextResponse.json({ error: "Issue the ATS bond first" }, { status: 400 });
       }
-      if (holder) {
+      for (const holder of unique) {
         try {
           await controlListBacker(campaign.tokenId, holder);
         } catch (error) {
-          const message = error instanceof Error ? error.message : "";
-          if (!/already in the control list/i.test(message)) throw error;
+          if (!/already in the control list/i.test(errorText(error))) throw error;
         }
       }
       const paused = await pauseBond(campaign.tokenId);
       const updated = await patchCampaign(slug, {
         tokenLifecycle: "frozen",
         freezeTxId: paused.transactionId,
-        backerAccountId: holder || campaign.backerAccountId,
       });
       return NextResponse.json({ campaign: updated, ...paused, mode: "pause" });
     }

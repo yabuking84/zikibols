@@ -30,7 +30,7 @@ export default async function OperatorPage({
         <p className="text-muted-foreground">
           {campaign.tokenLifecycle === "paid"
             ? "This campaign’s coupon is already on HashScan. Start a campaign to walk Issue → Mint → Pause → Coupon live."
-            : "Issue the ATS bond, mint one unit to the backer, pause it, then after founder + treasury sign-off release the coupon and settle the raise: most of it to the founder, the rest split pro-rata across backers. Backers pledge from the campaign page."}
+            : "Issue the ATS bond, mint one unit to each pledger, pause it, then after founder + treasury sign-off release the coupon and settle the raise: most of it to the founder, the rest split pro-rata across backers. Backers pledge from the campaign page."}
         </p>
         <Link
           href={`/campaigns/${campaign.slug}`}

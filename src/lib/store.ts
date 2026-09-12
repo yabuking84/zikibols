@@ -10,7 +10,8 @@ import {
   type Campaign,
   type TokenLifecycle,
 } from "@/lib/campaigns";
-import type { CampaignSettlement, PayoutApprovals, Pledge } from "@/lib/types";
+import type { CampaignSettlement, PayoutApprovals, Pledge, ShareMint } from "@/lib/types";
+import { alreadyMinted, normalizeMints } from "@/lib/mints";
 
 export type CampaignRuntime = {
   tokenId: string | null;
@@ -21,6 +22,7 @@ export type CampaignRuntime = {
   payoutTxId: string | null;
   couponTxId: string | null;
   backerAccountId: string | null;
+  mints: ShareMint[];
 };
 
 type StoredState = {
@@ -43,6 +45,7 @@ const RUNTIME_KEYS = [
   "payoutTxId",
   "couponTxId",
   "backerAccountId",
+  "mints",
 ] as const;
 
 const emptyApprovals: PayoutApprovals = { founderWallet: null, operator: false };
@@ -90,18 +93,26 @@ function runtimeFrom(seed: Campaign): CampaignRuntime {
     payoutTxId: seed.payoutTxId,
     couponTxId: seed.couponTxId ?? null,
     backerAccountId: seed.backerAccountId,
+    mints: normalizeMints(seed.mints, {
+      accountId: seed.backerAccountId,
+      txId: seed.transferTxId,
+    }),
   };
 }
 
 function hydrate(seed: Campaign, state: StoredState): Campaign {
   const runtime = state.runtime[seed.slug];
   const mine = state.pledges.filter((pledge) => pledge.campaignSlug === seed.slug);
+  const merged = { ...seed, ...runtime };
   return {
-    ...seed,
-    ...runtime,
+    ...merged,
     creatorEmail: seed.creatorEmail ?? null,
     pledgedHbar: seed.pledgedHbar + mine.reduce((sum, pledge) => sum + pledge.amountHbar, 0),
     backers: seed.backers + mine.length,
+    mints: normalizeMints(merged.mints, {
+      accountId: merged.backerAccountId,
+      txId: merged.transferTxId,
+    }),
   };
 }
 
@@ -119,6 +130,7 @@ async function load(): Promise<StoredState> {
         ? parsed.created.map((campaign) => ({
             ...campaign,
             creatorEmail: campaign.creatorEmail ?? null,
+            mints: Array.isArray(campaign.mints) ? campaign.mints : [],
           }))
         : [],
       pledges: Array.isArray(parsed.pledges)
@@ -198,6 +210,30 @@ export async function patchCampaign(slug: string, patch: Partial<Campaign>) {
   });
 }
 
+export async function recordShareMint(slug: string, mint: ShareMint) {
+  return withState((state) => {
+    const seed = catalog(state).find((campaign) => campaign.slug === slug);
+    if (!seed) return null;
+    const current = state.runtime[slug] ?? runtimeFrom(seed);
+    const mints = normalizeMints(current.mints, {
+      accountId: current.backerAccountId,
+      txId: current.transferTxId,
+    });
+    if (alreadyMinted(mints, mint.accountId, mint.wallet)) {
+      state.runtime[slug] = { ...current, mints };
+      return hydrate(seed, state);
+    }
+    state.runtime[slug] = {
+      ...current,
+      mints: [...mints, mint],
+      tokenLifecycle: "transferred",
+      transferTxId: mint.txId,
+      backerAccountId: current.backerAccountId ?? mint.accountId,
+    };
+    return hydrate(seed, state);
+  });
+}
+
 export type CreateCampaignInput = {
   title: string;
   blurb: string;
@@ -244,6 +280,7 @@ export async function createCampaign(input: CreateCampaignInput) {
       payoutTxId: null,
       couponTxId: null,
       backerAccountId: null,
+      mints: [],
       treasuryEvm: treasury as `0x${string}`,
       imageHue: input.assetClass === "invoice-receivable" ? "32 42% 42%" : "152 28% 32%",
     };
