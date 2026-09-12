@@ -1,4 +1,4 @@
-.node_modules
+node_modules
 .next
 .data
 .tools
@@ -8,5 +8,13 @@
 !.env.example
 *.md
 !README.md
+!README-*.md
+!PLAN.md
 .cursor
 agent-transcripts
+.vercel
+coverage
+*.tsbuildinfo
+.next-env.d.ts
+npm-debug.log*
+.DS_Store
