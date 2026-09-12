@@ -312,6 +312,25 @@ Internal KYC is **on** at create (required for `deployBond` encoding), then deac
 
 HBAR coupon still uses `@hashgraph/sdk` in `src/lib/hts.ts`. Bond issuance no longer uses `TokenCreateTransaction`.
 
+### ATS features used
+
+ATS can do much more (equity, dividends, voting, snapshots, lock, escrow, country lists, Mass Payout). Plain-language catalog: [docs/readme-ats.md](./docs/readme-ats.md). This app uses the slice below (`src/lib/ats.ts`).
+
+| Feature | What it means here | Where |
+|---|---|---|
+| **Bond** (not equity) | The campaign becomes a debt-style security (an IOU), not company shares. | `Bond.create` |
+| **Issue** | Clone an ATS diamond from the public testnet factory. | Operator desk → Issue bond |
+| **Roles** | After create, the operator gets issuer / pauser / control-list / coupon roles. | `Role.applyRoles` |
+| **Internal KYC on, then off** | KYC must be on for `deployBond` encoding; we deactivate it so minting does not need a Terminal3 credential. | `Kyc.deactivateInternalKyc` |
+| **Whitelist / control list** | Only the saved backer can receive the share. | `isWhiteList: true` + `Security.addToControlList` |
+| **Mint** | Hand out **one** unit to that backer’s Privy `0x` (or Hedera `0.0.x`). | `Security.issue` amount `1` |
+| **Pause** | Freeze all transfers — the compliance / lifecycle op. | `Security.pause` |
+| **Unpause** | Unfreeze right before writing the coupon so the diamond call can run. | `IPause.unpause` on release |
+| **Coupon record** | On-chain “this bond is due a coupon.” Not calculated yield. | `ICoupon.setCoupon` |
+| **Coupon HBAR** | Tiny payout (1000 tinybars) to the saved backer as distribution proof. Not ATS Mass Payout. | `payCoupon` in `src/lib/hts.ts` |
+
+**Not used:** equity, dividends, voting (`erc20VotesActivated: false`), partitions, clearing, lock, snapshots, stock splits, redemption, country control lists, Terminal3 KYC, ATS Mass Payout.
+
 ---
 
 ## What is live vs stored locally
