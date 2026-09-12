@@ -154,12 +154,12 @@ This is not for backers. It is the page after money came in.
 
 Imagine:
 
-1. Saving **which backer** gets the one official share
-2. Printing **one official share certificate**
-3. Sending that one share to the backer
+1. Printing **one official share certificate** (**[Issue bond](./readme-ats.md#issue-bond-and-mint-share)**)
+2. Sending **one copy to each unique pledger** (**[Mint share](./readme-ats.md#issue-bond-and-mint-share)**)
+3. (Optional) minting to another address that is not on the pledge list
 4. Stamping **“cannot be freely sold”** on it (a freeze)
 5. Waiting until **two people** say “yes, pay them” (founder + office)
-6. Sending a **tiny thank-you** to that one saved backer (see below)
+6. Sending a **tiny thank-you** to the **first** minted backer (see below)
 7. **Pay founder** — most of what this listing actually raised, to the wallet on the flyer
 8. **Pay backers** — the rest, split across every wallet that pledged, in proportion to what each sent
 
@@ -300,7 +300,7 @@ Honest limits of the demo:
 
 - The **Release coupon** thank-you is a tiny proof, not calculated profit
 - **Pay founder** / **Pay backers** are a fixed 90 / 10 split of live pledges, on an operator click — no invoice, harvest, or goal check
-- Only **one** share is minted (usually the latest backer), even though the cash split covers every pledger
+- Each unique pledger can get **one** share (not sized to how much they sent). The coupon crumb still goes to the first minted address — [how mint and pledge proof work](./readme-ats.md#one-bond-many-holders--what-ats-can-do-vs-what-we-do)
 - “Approve as founder” is whoever is logged in, not a bank-grade two-key lock
 - The Operator desk has **no operator login**; Issue / Mint / Pause / Co-sign / Release / Pay founder / Pay backers are open to anyone who can open the URL (the server keys still do the on-chain work; a cap and a reserve limit how much can leave)
 - Diligence can be skipped on purpose (**Pledge anyway**)

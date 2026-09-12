@@ -40,7 +40,7 @@ A **token** here means a **digital certificate of ownership** (like a share cert
 
 **A government or company bond.** “Lend us money, we pay you interest on a schedule.” ATS has a **bond** type for that.
 
-**This app.** Harbor Credit’s invoice and Northwind’s harvest share. The Operator desk uses ATS to print one locked certificate, freeze it, then record a coupon — instead of inventing a joke coin. Sending the raise to the founder and splitting a cut back to every pledger is a **plain treasury transfer**, not an ATS Mass Payout. See [Settlement](./readme-non-technical.md#settlement--the-founders-payday).
+**This app.** Harbor Credit’s invoice and Northwind’s harvest share. The Operator desk uses ATS to print one locked certificate, mint **one unit per unique pledger**, freeze it, then record a coupon — instead of inventing a joke coin. Sending the raise to the founder and splitting a cut back to every pledger is a **plain treasury transfer**, not an ATS Mass Payout. See [Settlement](./readme-non-technical.md#settlement--the-founders-payday). Units are **one each**, not sized to the pledge — [One bond, many holders](#one-bond-many-holders--what-ats-can-do-vs-what-we-do).
 
 ---
 
@@ -153,8 +153,8 @@ A small slice:
 
 | ATS can do | Zikibols does |
 |---|---|
-| Issue a bond | Yes — **Issue bond** |
-| Mint to someone | Yes — **one** share to one backer |
+| Issue a bond | Yes — **[Issue bond](#issue-bond-and-mint-share)** |
+| Mint to someone | Yes — **[Mint share](#issue-bond-and-mint-share)** — **one** unit **per unique pledger** |
 | Allowed list | Yes — backer is put on the list before mint |
 | Pause | Yes — **Pause / control list** |
 | Coupon | Yes — write “coupon due,” then send a tiny payout |
@@ -162,5 +162,78 @@ A small slice:
 | Dividends, voting, splits, KYC website, escrow, full cap… | No, not in this demo |
 
 So ATS is a **full workshop**. Zikibols is one short job in that workshop: print a locked IOU, freeze it, then show that a coupon can leave after two people say yes. The founder’s payday is the same office jar, not another ATS tool.
+
+---
+
+## Issue bond and Mint share
+
+These are the two Operator desk buttons that create the IOU. They are **not** the same job, and neither one pays anyone.
+
+Think of a paper share certificate.
+
+**Issue bond** = print the official blank form and register it.  
+**Mint share** = write a person’s name on a copy and hand it to them. You can do this **once per unique pledger**.
+
+Starting a campaign only pins the flyer. **Issue bond** is what actually creates the certificate on Hedera.
+
+### Issue bond
+
+Creates the campaign’s ATS bond on Hedera testnet — one contract (a “diamond”) cloned from Hedera’s public factory. After this click you get a contract id (`0.0.…`) and a HashScan link. The listing status becomes **Issued**.
+
+That write is stored on the campaign as `tokenId` and `issueTxId` in `.data/state.json` (`runtime[slug]`). It is how the website later knows “this flyer’s IOU is that contract.”
+
+What the bond holds: a name, a ticker, a short memo like `zikibols:mtb-full-suspension-bike-frame`, plus dummy bond paperwork. Not the pledged amount. Not the story. Not who funded.
+
+What it does **not** do:
+
+- Give anyone a share. The form exists; nobody holds a copy yet.
+- Need a pledger first. You can issue with an empty list, then mint as pledges come in.
+- Move the raise. Coins stay in the treasury.
+
+You can only issue once. If the bond is already issued, the button stays off.
+
+### Mint share
+
+Hands **one** unit of that already-issued bond to **one** wallet. The Operator desk lists each unique pledger (same wallet, summed pledges). Click **Mint share** on that row. The desk first puts that wallet on the allowed list, then mints.
+
+You can mint again to a **different** pledger. The same wallet cannot be minted twice. After the first successful mint the listing status becomes **Transferred**. Each mint is stored in `.data/state.json` (`runtime[slug].mints`) with a HashScan tx.
+
+Mint stays off until the bond is issued, and it closes after **Pause**.
+
+What it does **not** do:
+
+- Create the bond. That was **Issue bond**.
+- Pay HBAR. The tiny coupon and **Pay backers** are later buttons.
+- Size the share to the pledge. A 13 ℏ pledge still mints **1** unit, not 13. Alice who sent 13 ℏ and Bob who sent 50 ℏ each get **1** unit.
+
+**Mint to another address** is for a wallet that is not on the pledge list (or for `HEDERA_BACKER_ACCOUNT_ID`). The tiny coupon crumb still goes to the **first** minted address (`backerAccountId`).
+
+### Order on the desk
+
+1. **Issue bond** — print the official form on Hedera.
+2. **Mint share** — one click per unique pledger (or an extra address).
+3. **Pause / control list** — stamp “cannot be freely sold.” Puts every minted holder on the allowed list, then pauses.
+
+---
+
+## One bond, many holders — what ATS can do vs what we do
+
+You do **not** print a separate bond per person. You print **one** campaign bond (one ATS contract), then hand units to many wallets.
+
+ATS can mint *N* units sized to the pledge (13 ℏ → 13 units), take a snapshot of “who held what,” then pay a coupon or Mass Payout by that balance. A finished product would treat that balance as the public proof they funded.
+
+**This app mints one unit per unique pledger.** The Operator desk lists everyone who pledged. Each **Mint share** click adds that wallet to the allowed list and issues **1** unit of the same bond. HashScan then shows each minted wallet holding 1 of that IOU.
+
+What is still **off** the bond:
+
+| Proof | Where it lives |
+|---|---|
+| They sent play money | HashScan tx to the treasury |
+| Which flyer, and how much | `.data/state.json` → `pledges` |
+| Which wallets already got a unit | `.data/state.json` → `runtime[slug].mints` |
+
+**Pay backers** still reads pledge rows, not ATS balances — so the cash split can include someone you have not minted yet. The tiny **Release coupon** crumb still goes to the **first** minted address, not to every holder. Amounts are not proportional (13 ℏ and 50 ℏ both get 1 unit).
+
+Honest list of other holes: [readme-limitations.md](./readme-limitations.md).
 
 Hedera’s own docs: [Asset Tokenization Studio](https://docs.hedera.com/solutions/tokenization/ats).

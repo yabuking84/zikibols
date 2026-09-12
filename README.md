@@ -293,10 +293,9 @@ Token issue / pause / coupon are **not** on this page. Those live on the Operato
 ### As an operator
 
 1. Open **Operator desk** in the sidebar, or go to `/campaigns/<slug>/operate`.
-2. **Save backer** — Privy `0x…` or Hedera `0.0.xxxxx` that should receive one share. After a Privy pledge, the desk offers **Use this address** (the wallet itself; no 0.0.x mapping required). You can still type an account, or fall back to `HEDERA_BACKER_ACCOUNT_ID`.
-3. **Issue bond** — deploys an ATS diamond clone on Hedera testnet (factory `0.0.9213391`). You get a contract id and HashScan link.
-4. **Mint share** — issues **one** unit to that backer address (whitelist first).
-5. **Pause / control list** — pauses the bond (compliance control). The backer is already on the whitelist from mint.
+2. **Issue bond** — deploys an ATS diamond clone on Hedera testnet (factory `0.0.9213391`). You get a contract id and HashScan link.
+3. **Mint share** — one unit per unique pledger (whitelist first). Repeat for each wallet. **Mint to another address** covers a `0x` / `0.0.x` that is not on the pledge list.
+4. **Pause / control list** — pauses the bond (compliance control). Minted holders are put on the whitelist.
 6. **Approve as founder** — log in with Privy and click once. This is founder 1.
 7. **Co-sign as treasury** — operator click. This is founder 2.
 8. **Release coupon** — enabled only after both approvals **and** the bond is paused. Writes an ATS coupon record, then sends a small HBAR coupon to the backer. HashScan links appear for both.
@@ -346,7 +345,7 @@ The operator desk issues a bond through `@hashgraph/asset-tokenization-sdk` v8 a
 | Step | ATS call | What judges see |
 |---|---|---|
 | Issue | `Bond.create` | Diamond contract on HashScan (`0.0.x`) |
-| Mint share | `Security.addToControlList` then `Security.issue` 1 unit to the backer's Privy `0x` | Mint tx |
+| Mint share | `Security.addToControlList` then `Security.issue` 1 unit to each unique pledger | Mint tx per backer |
 | Pause | `Security.pause` | Pause tx (the required lifecycle / compliance op) |
 | Coupon | ATS `ICoupon.setCoupon` on the diamond, then a small HBAR transfer | Coupon record tx + HBAR tx |
 
@@ -364,8 +363,8 @@ ATS can do much more (equity, dividends, voting, snapshots, lock, escrow, countr
 | **Issue** | Clone an ATS diamond from the public testnet factory. | Operator desk → Issue bond |
 | **Roles** | After create, the operator gets issuer / pauser / control-list / coupon roles. | `Role.applyRoles` |
 | **Internal KYC on, then off** | KYC must be on for `deployBond` encoding; we deactivate it so minting does not need a Terminal3 credential. | `Kyc.deactivateInternalKyc` |
-| **Whitelist / control list** | Only the saved backer can receive the share. | `isWhiteList: true` + `Security.addToControlList` |
-| **Mint** | Hand out **one** unit to that backer’s Privy `0x` (or Hedera `0.0.x`). | `Security.issue` amount `1` |
+| **Whitelist / control list** | Each minted pledger is put on the allowed list. | `isWhiteList: true` + `Security.addToControlList` |
+| **Mint** | Hand out **one** unit per unique pledger (`0x` or `0.0.x`). | `Security.issue` amount `1` |
 | **Pause** | Freeze all transfers — the compliance / lifecycle op. | `Security.pause` |
 | **Unpause** | Unfreeze right before writing the coupon so the diamond call can run. | `IPause.unpause` on release |
 | **Coupon record** | On-chain “this bond is due a coupon.” Not calculated yield. | `ICoupon.setCoupon` |
@@ -396,7 +395,7 @@ Product debt we state up front, not hidden behavior. Plain-English walkthrough: 
 |---|---|
 | Service and consumer are the same app | The agent calls its own `/api/risk-report` over HTTP. The `curl` above shows the paywall exists independently of the agent. |
 | "Approve as founder" is any logged-in Privy wallet | The payout route stores the wallet string; there is no signature and no check against the campaign's creator wallet. The 2-of-2 is stored flags, not a second key. |
-| One share per campaign | The mint goes to one saved address (latest pledger, or env), not every pledger. |
+| Shares are not 1:1 with HBAR | Each unique pledger can receive **one** ATS unit. A 13 ℏ pledge does not mint 13 shares. Amounts live on the pledge tx / `pledges` rows. |
 | Coupon is tinybars | Lifecycle proof, not yield. Maturity does not gate release. ATS Mass Payout is not used. |
 | Settlement is a fixed percentage split | 90 / 10 out of the raise, on an operator click. No real-world event (invoice cleared, harvest sold) gates it, and the pool is not calculated yield. |
 | One treasury for every campaign | Hedera sees one account; which pledge belonged to which campaign is `campaignSlug` in `state.json`. Delete that file before settling and the split is lost. |
@@ -418,7 +417,7 @@ Check **Integrations** on the dashboard first.
 | Check runs Graph but HCS link is missing | Expected without operator/agent Hedera keys. Diligence still succeeds. |
 | Check runs Graph but fails on the paid note | x402 env incomplete, or the agent account has no testnet HBAR. Same payTo and agent is OK: the app creates a dedicated receiver on first check. |
 | **Issue bond** stays disabled | Operator/agent Hedera keys missing, or the bond is already issued. |
-| **Mint share** stays disabled | Issue the bond, then save a backer `0x` or `0.0.x`. After a Privy pledge, use **Use this address**. |
+| **Mint share** stays disabled | Issue the bond first. After pause, minting is closed. Each unique pledger has their own Mint button. |
 | **Pause** fails | Issue first. If mint already ran, Pause should still work. |
 | **Release coupon** stays disabled | Pause first, then both **Approve as founder** and **Co-sign as treasury**. |
 | **Pay founder** / **Pay backers** stay disabled | Both approvals missing, already paid, or the campaign has no live pledges. |

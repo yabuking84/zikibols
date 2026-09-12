@@ -319,7 +319,7 @@ If ATS had been killed on Wednesday, step 4 would have stayed on HTS and the Tok
 |---|---|
 | Service and consumer are the same app | The agent calls its own `/api/*` over HTTP. The 402 `curl` in the README shows the service exists independently. |
 | "Approve as founder" is any logged-in Privy wallet | `payout` route accepts a `wallet` string; no signature, no check against `creatorWallet`. Stored flags, not a second key. |
-| One share per campaign | Mint goes to the latest pledger, not every pledger |
+| Shares are not 1:1 with HBAR | Mint is 1 unit per unique pledger (`Security.issue` amount `1`). A 13 ℏ pledge does not mint 13 units. |
 | ATS coupon is a record, HBAR payout is ours | ATS distribution is the Mass Payout service; we do not run it. The 1000-tinybar HBAR transfer is lifecycle proof, not yield. |
 | Settlement is an operator click | `release-founder` / `release-backers` split the live raise 90 / 10 out of the shared treasury (`src/lib/settlement.ts`), capped by `PAYOUT_MAX_HBAR` and floored by `PAYOUT_RESERVE_HBAR`. No goal check, no maturity, no real-world cash event gates it. |
 | HTS path only: airdrop can land as *pending* | `TokenAirdropTransaction` succeeds even if the recipient has no free auto-association; freeze then fails. Rehearse once; ATS path avoids this. |

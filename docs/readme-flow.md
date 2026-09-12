@@ -97,7 +97,7 @@ The listing lives in the app. The bond lives on Hedera. They point at each other
 flowchart TD
   listing[Campaign_in_state_json] -->|Issue_writes_tokenId| bond[ATS_bond_on_Hedera]
   bond -->|memo_zikibols_slug| listing
-  listing -->|Mint| share[One_share_to_saved_backer]
+  listing -->|Mint| share[One_share_per_unique_pledger]
   share --> pause[Pause_cannot_freely_sell]
   pause --> twoYes[Two_people_say_yes]
   twoYes --> couponRecord[ATS_coupon_record]
@@ -106,13 +106,13 @@ flowchart TD
   twoYes --> backerPay[10_percent_split_to_pledgers]
 ```
 
-**Issue** prints the official certificate and saves its contract id (`tokenId`) on the campaign. That is how the app knows “this listing’s bond is that contract.”
+**Issue** prints the official certificate and saves its contract id (`tokenId`) on the campaign. That is how the app knows “this listing’s bond is that contract.” What the two buttons do, in the same voice: [Issue bond and Mint share](./readme-ats.md#issue-bond-and-mint-share).
 
 **What is on the bond:** a name, a ticker, and a short memo like `zikibols:harbor-credit`. Plus dummy bond paperwork (a fake ISIN, a face value, dates). Not the pledged amount. Not the story.
 
-**What stays in `.data/state.json`:** the flyer, who pledged how much, the saved backer, and that `tokenId` pointer.
+**What stays in `.data/state.json`:** the flyer, who pledged how much, who already got a unit (`mints`), and that `tokenId` pointer.
 
-**Mint** gives **one** share to the saved backer. **Pause** stamps “cannot be freely sold.”
+**Mint** gives **one** share to each unique pledger you click. **Pause** stamps “cannot be freely sold.”
 
 After **two people say yes** (founder + operator):
 
