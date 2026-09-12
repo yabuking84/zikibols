@@ -189,15 +189,18 @@ function PledgeForm({
           pledge.
         </p>
       ) : null}
-      {privy.authenticated && balanceReady && walletEmpty ? (
+      {privy.authenticated && wallet?.address && !balanceReady ? (
+        <p className="text-sm text-muted-foreground">Checking HBAR balance…</p>
+      ) : null}
+      {privy.authenticated && walletEmpty ? (
         <div
           role="status"
           className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
         >
           <p className="font-medium">Your wallet is empty (0 ℏ).</p>
           <p className="mt-1 text-destructive/90">
-            Hedera cannot send a pledge until this pocket has test HBAR. Copy your address
-            in the header, then fund it from the faucet.
+            This Privy address has no Hedera testnet HBAR yet (or no Hedera account). Copy
+            your address in the header, then fund it from the faucet.
           </p>
           <a
             className="mt-2 inline-block font-medium underline-offset-4 hover:underline"

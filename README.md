@@ -21,7 +21,7 @@ A backer can:
 
 Two demo campaigns ship with the app; you can also **Start a campaign**. Missing keys fail on purpose — the dashboard never invents Graph, payment, or founder-search data.
 
-Plain-English explainer (no finance or blockchain assumed): [docs/readme-non-technical.md](./docs/readme-non-technical.md). What **Check this creator** does, step by step: [docs/readme-creator-lookup.md](./docs/readme-creator-lookup.md). What ATS is and can do, in the same voice: [docs/readme-ats.md](./docs/readme-ats.md). What this prototype **can and cannot** do: [docs/readme-limitations.md](./docs/readme-limitations.md). Plan, prize mapping, schedule, and known gaps: [PLAN.md](./PLAN.md).
+Plain-English explainer (no finance or blockchain assumed): [docs/readme-non-technical.md](./docs/readme-non-technical.md). How the whole app flows (diagrams): [docs/readme-flow.md](./docs/readme-flow.md). What **Check this creator** does, step by step: [docs/readme-creator-lookup.md](./docs/readme-creator-lookup.md). What ATS is and can do, in the same voice: [docs/readme-ats.md](./docs/readme-ats.md). What this prototype **can and cannot** do: [docs/readme-limitations.md](./docs/readme-limitations.md). Plan, prize mapping, schedule, and known gaps: [PLAN.md](./PLAN.md).
 
 ---
 
