@@ -27,7 +27,7 @@ const steps = [
   },
   {
     title: "Tokenize and pay out",
-    body: "On the operator desk, issue an ATS bond, mint one share per pledger, pause it, then release a coupon after a 2-of-2 founder + operator sign-off.",
+    body: "On the operator desk, issue an ATS bond, mint one share per pledger, pause it, then pay the founder and split the rest pro-rata across backers.",
   },
 ];
 

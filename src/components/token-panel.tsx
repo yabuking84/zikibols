@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +9,7 @@ import type { Campaign, TokenLifecycle } from "@/lib/campaigns";
 import type { CampaignSettlement } from "@/lib/types";
 import type { MintHolder } from "@/lib/mints";
 import type { SettlementQuote } from "@/lib/settlement";
-import { hashscanAccountUrl, hashscanContractUrl, hashscanTxUrl } from "@/lib/hedera";
+import { hashscanContractUrl, hashscanTxUrl } from "@/lib/hedera";
 import { HashScanAccount } from "@/components/hashscan-account";
 import { hbar, hbarTinybars, shortAddress } from "@/lib/money";
 
@@ -128,15 +127,7 @@ export function TokenPanel({ slug }: { slug: string }) {
     return <p className="text-sm text-muted-foreground">Loading ATS bond…</p>;
   }
 
-  const {
-    campaign,
-    approvals,
-    payoutReady,
-    operatorConfigured,
-    settlement,
-    backerAccountId,
-    holders,
-  } = data;
+  const { campaign, operatorConfigured, settlement, holders } = data;
   const lifecycle = campaign.tokenLifecycle;
   const mintedCount = holders.filter((holder) => holder.mint).length;
   const pendingCount = holders.filter((holder) => !holder.mint).length;
@@ -144,8 +135,6 @@ export function TokenPanel({ slug }: { slug: string }) {
   const canMint =
     operatorConfigured && (lifecycle === "issued" || lifecycle === "transferred");
   const canFreeze = lifecycle === "issued" || lifecycle === "transferred";
-  const canApprove = lifecycle === "transferred" || lifecycle === "frozen";
-  const canRelease = payoutReady && lifecycle === "frozen";
   const nextStep =
     lifecycle === "draft"
       ? "Next: issue the ATS bond."
@@ -156,7 +145,7 @@ export function TokenPanel({ slug }: { slug: string }) {
           : lifecycle === "transferred" || lifecycle === "issued"
             ? "Next: pause the bond. Each mint already put that backer on the allowed list."
             : lifecycle === "frozen"
-              ? "Next: both founders sign, then release the coupon."
+              ? "Next: pay the founder and backers from the treasury."
               : "Coupon paid.";
 
   return (
@@ -191,6 +180,7 @@ export function TokenPanel({ slug }: { slug: string }) {
       <div className="flex flex-wrap gap-2">
         <Button
           size="sm"
+          loading={busy === "issue"}
           disabled={Boolean(busy) || !canIssue}
           onClick={() => post(`/api/campaigns/${slug}/token`, { action: "issue" })}
         >
@@ -199,6 +189,7 @@ export function TokenPanel({ slug }: { slug: string }) {
         <Button
           size="sm"
           variant="outline"
+          loading={busy === "freeze"}
           disabled={Boolean(busy) || !canFreeze}
           onClick={() => post(`/api/campaigns/${slug}/token`, { action: "freeze" })}
         >
@@ -214,7 +205,7 @@ export function TokenPanel({ slug }: { slug: string }) {
         </div>
         <p className="text-xs text-muted-foreground">
           One ATS unit per unique pledger of this same bond. Each mint takes 30–60
-          seconds. The tiny coupon crumb still goes to the first minted address.
+          seconds.
         </p>
         {holders.length === 0 ? (
           <p className="text-xs text-muted-foreground">
@@ -249,6 +240,7 @@ export function TokenPanel({ slug }: { slug: string }) {
                     <Button
                       size="sm"
                       variant="outline"
+                      loading={rowBusy}
                       disabled={Boolean(busy) || !canMint || !target}
                       onClick={() =>
                         post(
@@ -284,6 +276,7 @@ export function TokenPanel({ slug }: { slug: string }) {
             <Button
               size="sm"
               variant="outline"
+              loading={busy === `transfer:${backerDraft.trim()}`}
               disabled={Boolean(busy) || !canMint || !backerDraft.trim()}
               onClick={() =>
                 post(
@@ -303,19 +296,6 @@ export function TokenPanel({ slug }: { slug: string }) {
             </Button>
           </div>
         </div>
-        {backerAccountId ? (
-          <p className="text-xs text-muted-foreground">
-            Coupon crumb recipient{" "}
-            <a
-              className="font-mono text-primary underline-offset-4 hover:underline"
-              href={hashscanAccountUrl(backerAccountId)}
-              target="_blank"
-              rel="noreferrer"
-            >
-              {backerAccountId}
-            </a>
-          </p>
-        ) : null}
       </div>
       {busy === "issue" || busy?.startsWith("transfer:") || busy === "freeze" ? (
         <p className="text-xs text-muted-foreground">
@@ -336,45 +316,10 @@ export function TokenPanel({ slug }: { slug: string }) {
         <TxLink id={campaign.couponTxId} label="Coupon record tx" />
         <TxLink id={campaign.payoutTxId} label="Coupon HBAR tx" />
       </div>
-      <div className="space-y-3 border-t border-border pt-4">
-        <h3 className="text-sm font-medium">Payout policy (2 of 2)</h3>
-        <p className="text-xs text-muted-foreground">
-          Founder 1 is the Privy wallet. Founder 2 is the Hedera treasury operator.
-          Both must approve before a coupon can leave the campaign.
-        </p>
-        <p className="text-xs text-muted-foreground">
-          Founder: {approvals.founderWallet ? shortAddress(approvals.founderWallet) : "pending"}{" "}
-          · Operator: {approvals.operator ? "signed" : "pending"}
-        </p>
-        {lifecycle === "paid" ? (
-          <p className="text-xs text-muted-foreground">
-            Coupon already released. HashScan links for the record and the HBAR
-            transfer are above.
-          </p>
-        ) : (
-          <PayoutButtons
-            slug={slug}
-            busy={busy}
-            canApprove={canApprove}
-            payoutReady={canRelease}
-            onFounder={(wallet) =>
-              post(`/api/campaigns/${slug}/payout`, {
-                action: "approve-founder",
-                wallet,
-              })
-            }
-            onOperator={() =>
-              post(`/api/campaigns/${slug}/payout`, { action: "approve-operator" })
-            }
-            onRelease={() => post(`/api/campaigns/${slug}/payout`, { action: "release" })}
-          />
-        )}
-      </div>
       <SettlementSection
         slug={slug}
         creatorWallet={campaign.creatorWallet}
         settlement={settlement}
-        approved={payoutReady}
         busy={busy}
         onPay={post}
       />
@@ -387,14 +332,12 @@ function SettlementSection({
   slug,
   creatorWallet,
   settlement,
-  approved,
   busy,
   onPay,
 }: {
   slug: string;
   creatorWallet: string;
   settlement: { quote: SettlementQuote; paid: CampaignSettlement };
-  approved: boolean;
   busy: string | null;
   onPay: (path: string, body: Record<string, string>) => Promise<void>;
 }) {
@@ -429,7 +372,8 @@ function SettlementSection({
             <Button
               size="sm"
               variant="outline"
-              disabled={Boolean(busy) || !approved || Boolean(paid.founder)}
+              loading={busy === "release-founder"}
+              disabled={Boolean(busy) || Boolean(paid.founder)}
               onClick={() => onPay(path, { action: "release-founder" })}
             >
               {busy === "release-founder"
@@ -441,7 +385,8 @@ function SettlementSection({
             <Button
               size="sm"
               variant="outline"
-              disabled={Boolean(busy) || !approved || Boolean(paid.backers)}
+              loading={busy === "release-backers"}
+              disabled={Boolean(busy) || Boolean(paid.backers)}
               onClick={() => onPay(path, { action: "release-backers" })}
             >
               {busy === "release-backers"
@@ -451,114 +396,12 @@ function SettlementSection({
                   : `Pay backers ${hbarTinybars(quote.poolTinybars)}`}
             </Button>
           </div>
-          {!approved ? (
-            <p className="text-xs text-muted-foreground">
-              Both approvals above are required before HBAR can leave the treasury.
-            </p>
-          ) : null}
           <div className="space-y-1">
             <TxLink id={paid.founder?.txId ?? null} label="Founder payout tx" />
             <TxLink id={paid.backers?.txId ?? null} label="Backer payout tx" />
           </div>
         </>
       )}
-    </div>
-  );
-}
-
-function PayoutButtons({
-  slug,
-  busy,
-  canApprove,
-  payoutReady,
-  onFounder,
-  onOperator,
-  onRelease,
-}: {
-  slug: string;
-  busy: string | null;
-  canApprove: boolean;
-  payoutReady: boolean;
-  onFounder: (wallet: string) => void;
-  onOperator: () => void;
-  onRelease: () => void;
-}) {
-  const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
-  if (!appId) {
-    return (
-      <div className="flex flex-wrap gap-2">
-        <Button size="sm" variant="outline" disabled>
-          Log in to approve as founder
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={Boolean(busy) || !canApprove}
-          onClick={onOperator}
-        >
-          {busy === "approve-operator" ? "Signing…" : "Co-sign as treasury"}
-        </Button>
-        <Button size="sm" disabled>
-          Release coupon
-        </Button>
-      </div>
-    );
-  }
-  return (
-    <PayoutButtonsAuthed
-      slug={slug}
-      busy={busy}
-      canApprove={canApprove}
-      payoutReady={payoutReady}
-      onFounder={onFounder}
-      onOperator={onOperator}
-      onRelease={onRelease}
-    />
-  );
-}
-
-function PayoutButtonsAuthed({
-  busy,
-  canApprove,
-  payoutReady,
-  onFounder,
-  onOperator,
-  onRelease,
-}: {
-  slug: string;
-  busy: string | null;
-  canApprove: boolean;
-  payoutReady: boolean;
-  onFounder: (wallet: string) => void;
-  onOperator: () => void;
-  onRelease: () => void;
-}) {
-  const privy = usePrivy();
-  const { wallets } = useWallets();
-  const wallet = wallets[0]?.address;
-
-  return (
-    <div className="flex flex-wrap gap-2">
-      <Button
-        size="sm"
-        variant="outline"
-        disabled={Boolean(busy) || !wallet || !canApprove}
-        onClick={() => {
-          if (!privy.authenticated) {
-            privy.login();
-            return;
-          }
-          if (wallet) onFounder(wallet);
-        }}
-      >
-        {busy === "approve-founder" ? "Signing…" : "Approve as founder"}
-      </Button>
-      <Button size="sm" variant="outline" disabled={Boolean(busy) || !canApprove} onClick={onOperator}>
-        {busy === "approve-operator" ? "Signing…" : "Co-sign as treasury"}
-      </Button>
-      <Button size="sm" disabled={Boolean(busy) || !payoutReady} onClick={onRelease}>
-        {busy === "release" ? "Paying…" : "Release coupon"}
-      </Button>
     </div>
   );
 }

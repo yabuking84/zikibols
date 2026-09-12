@@ -100,7 +100,7 @@ export function CheckCreator({
           operator keys are set.
         </p>
       </div>
-      <Button onClick={run} disabled={loading}>
+      <Button onClick={run} loading={loading} disabled={loading}>
         {loading ? "Agent running…" : result ? "Run check again" : "Check this creator"}
       </Button>
       {error ? (

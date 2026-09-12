@@ -237,6 +237,7 @@ function PledgeForm({
       <Button
         className="w-full"
         onClick={pledge}
+        loading={busy}
         disabled={
           busy ||
           !diligenceDone ||

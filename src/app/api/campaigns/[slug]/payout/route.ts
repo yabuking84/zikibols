@@ -94,16 +94,6 @@ export async function POST(
     }
 
     if (body.action === "release-founder" || body.action === "release-backers") {
-      if (!(await payoutReady(slug))) {
-        return NextResponse.json(
-          {
-            error: "Need two approvals: Privy founder + treasury operator.",
-            approvals: await getPayoutApprovals(slug),
-          },
-          { status: 403 },
-        );
-      }
-
       const settled = await getSettlement(slug);
       const quote = await settlementQuote(slug);
       const founderRun = body.action === "release-founder";
