@@ -3,9 +3,11 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
+  Check,
   Command,
+  Copy,
   Landmark,
   LayoutDashboard,
   Menu,
@@ -167,6 +169,15 @@ function AuthControls() {
   const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
   const privy = usePrivy();
   const { wallets } = useWallets();
+  const [copied, setCopied] = useState(false);
+
+  const address = wallets[0]?.address;
+
+  useEffect(() => {
+    if (!copied) return;
+    const id = window.setTimeout(() => setCopied(false), 1600);
+    return () => window.clearTimeout(id);
+  }, [copied]);
 
   if (!appId) {
     return (
@@ -188,14 +199,31 @@ function AuthControls() {
     );
   }
 
-  const address = wallets[0]?.address;
+  async function copyAddress() {
+    if (!address) return;
+    try {
+      await navigator.clipboard.writeText(address);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  }
 
   return (
     <div className="flex items-center gap-2">
       {address ? (
-        <span className="hidden max-w-28 truncate font-mono text-xs text-muted-foreground sm:inline">
-          {shortAddress(address)}
-        </span>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="max-w-36 font-mono text-xs text-muted-foreground"
+          onClick={copyAddress}
+          title={copied ? "Copied" : address}
+          aria-label={copied ? "Wallet address copied" : "Copy wallet address"}
+        >
+          {copied ? <Check /> : <Copy />}
+          <span className="truncate">{copied ? "Copied" : shortAddress(address)}</span>
+        </Button>
       ) : null}
       <Button size="sm" variant="outline" onClick={() => privy.logout()}>
         Log out
