@@ -21,7 +21,7 @@ A backer can:
 
 Two demo campaigns ship with the app; you can also **Start a campaign**. Missing keys fail on purpose — the dashboard never invents Graph, payment, or founder-search data.
 
-Plain-English explainer (no finance or blockchain assumed): [docs/readme-non-technical.md](./docs/readme-non-technical.md). What ATS is and can do, in the same voice: [docs/readme-ats.md](./docs/readme-ats.md). Plan, prize mapping, schedule, and known gaps: [PLAN.md](./PLAN.md).
+Plain-English explainer (no finance or blockchain assumed): [docs/readme-non-technical.md](./docs/readme-non-technical.md). What **Check this creator** does, step by step: [docs/readme-creator-lookup.md](./docs/readme-creator-lookup.md). What ATS is and can do, in the same voice: [docs/readme-ats.md](./docs/readme-ats.md). What this prototype **can and cannot** do: [docs/readme-limitations.md](./docs/readme-limitations.md). Plan, prize mapping, schedule, and known gaps: [PLAN.md](./PLAN.md).
 
 ---
 
@@ -361,7 +361,7 @@ ATS can do much more (equity, dividends, voting, snapshots, lock, escrow, countr
 
 ## Known gaps
 
-Product debt we state up front, not hidden behavior:
+Product debt we state up front, not hidden behavior. Plain-English walkthrough: [docs/readme-limitations.md](./docs/readme-limitations.md).
 
 | Gap | Detail |
 |---|---|

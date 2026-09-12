@@ -96,6 +96,9 @@ export const campaigns: Campaign[] = [
   },
 ];
 
+/** Fixture listings in this file. Flip to true to show Harbor Credit and Northwind Farms again. */
+export const SHOW_SEED_CATALOG = false;
+
 /** Seed catalog lookup. Live pledged totals and token ids live in `src/lib/store.ts`. */
 export function getCampaign(slug: string) {
   return campaigns.find((campaign) => campaign.slug === slug);
@@ -132,6 +135,12 @@ export const RESERVED_SLUGS = new Set(["new"]);
 /** Harbor Credit and Northwind Farms ship with fixture pledged totals. */
 export function isSeedCatalog(slug: string) {
   return campaigns.some((campaign) => campaign.slug === slug);
+}
+
+/** Listings the app should render. Seed fixtures stay on disk when this is empty. */
+export function listedCampaigns<T extends { slug: string }>(items: T[]): T[] {
+  if (SHOW_SEED_CATALOG) return items;
+  return items.filter((item) => !isSeedCatalog(item.slug));
 }
 
 export function slugifyCampaign(title: string) {

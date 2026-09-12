@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Campaign, TokenLifecycle } from "@/lib/campaigns";
 import { hashscanAccountUrl, hashscanContractUrl, hashscanTxUrl } from "@/lib/hedera";
+import { HashScanAccount } from "@/components/hashscan-account";
 import { shortAddress } from "@/lib/money";
 
 type Snapshot = {
@@ -120,17 +121,23 @@ export function TokenPanel({ slug }: { slug: string }) {
         bond (ERC-1400/3643 diamond) with a whitelist and pause — not a meme ticker.
       </p>
       <p className="text-xs font-medium">{nextStep}</p>
+      <HashScanAccount evm={campaign.treasuryEvm} />
       {campaign.tokenId ? (
-        <a
-          className="block font-mono text-xs text-primary underline-offset-4 hover:underline"
-          href={hashscanContractUrl(campaign.tokenId)}
-          target="_blank"
-          rel="noreferrer"
-        >
-          {campaign.tokenId}
-        </a>
+        <div className="space-y-1">
+          <p className="text-xs text-muted-foreground">Bond contract</p>
+          <a
+            className="block break-all font-mono text-xs text-primary underline-offset-4 hover:underline"
+            href={hashscanContractUrl(campaign.tokenId)}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {campaign.tokenId}
+          </a>
+        </div>
       ) : (
-        <p className="font-mono text-xs text-muted-foreground">No token id yet</p>
+        <p className="text-xs text-muted-foreground">
+          No bond contract yet — Issue bond to get a HashScan id.
+        </p>
       )}
       <div className="space-y-1.5">
         <Label htmlFor="backer-account">Backer address</Label>

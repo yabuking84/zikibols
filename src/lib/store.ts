@@ -3,6 +3,7 @@ import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   campaigns as seedCampaigns,
+  listedCampaigns,
   RESERVED_SLUGS,
   slugifyCampaign,
   type AssetClass,
@@ -60,8 +61,12 @@ function emptyState(): StoredState {
   return { version: 1, runtime: {}, created: [], pledges: [], approvals: {}, hcsTopicId: null, x402PayToAccountId: null };
 }
 
-function catalog(state: StoredState) {
+function allCampaigns(state: StoredState) {
   return [...seedCampaigns, ...state.created];
+}
+
+function catalog(state: StoredState) {
+  return listedCampaigns(allCampaigns(state));
 }
 
 function runtimeFrom(seed: Campaign): CampaignRuntime {
@@ -200,7 +205,7 @@ export async function createCampaign(input: CreateCampaignInput) {
   return withState((state) => {
     const taken = new Set([
       ...RESERVED_SLUGS,
-      ...catalog(state).map((campaign) => campaign.slug),
+      ...allCampaigns(state).map((campaign) => campaign.slug),
     ]);
     let slug = slugifyCampaign(input.title);
     if (taken.has(slug)) {
@@ -237,9 +242,11 @@ export async function createCampaign(input: CreateCampaignInput) {
 
 export async function listPledges(campaignSlug?: string) {
   const state = await load();
-  return campaignSlug
+  const visible = new Set(catalog(state).map((campaign) => campaign.slug));
+  const pledges = campaignSlug
     ? state.pledges.filter((pledge) => pledge.campaignSlug === campaignSlug)
     : state.pledges;
+  return pledges.filter((pledge) => visible.has(pledge.campaignSlug));
 }
 
 export async function addPledge(input: Omit<Pledge, "id" | "createdAt">) {

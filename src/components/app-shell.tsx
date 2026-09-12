@@ -23,6 +23,8 @@ import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { shortAddress } from "@/lib/money";
 import { cn } from "cn";
+import { Badge } from "@/components/ui/badge";
+import { useHbarBalance } from "@/components/use-hbar-balance";
 
 const generalNav = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -172,6 +174,7 @@ function AuthControls() {
   const [copied, setCopied] = useState(false);
 
   const address = wallets[0]?.address;
+  const { empty: walletEmpty } = useHbarBalance(address);
 
   useEffect(() => {
     if (!copied) return;
@@ -212,18 +215,25 @@ function AuthControls() {
   return (
     <div className="flex items-center gap-2">
       {address ? (
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          className="max-w-36 font-mono text-xs text-muted-foreground"
-          onClick={copyAddress}
-          title={copied ? "Copied" : address}
-          aria-label={copied ? "Wallet address copied" : "Copy wallet address"}
-        >
-          {copied ? <Check /> : <Copy />}
-          <span className="truncate">{copied ? "Copied" : shortAddress(address)}</span>
-        </Button>
+        <>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="max-w-36 font-mono text-xs text-muted-foreground"
+            onClick={copyAddress}
+            title={copied ? "Copied" : address}
+            aria-label={copied ? "Wallet address copied" : "Copy wallet address"}
+          >
+            {copied ? <Check /> : <Copy />}
+            <span className="truncate">{copied ? "Copied" : shortAddress(address)}</span>
+          </Button>
+          {walletEmpty ? (
+            <Badge variant="destructive" title="Fund this wallet with Hedera testnet HBAR">
+              Empty
+            </Badge>
+          ) : null}
+        </>
       ) : null}
       <Button size="sm" variant="outline" onClick={() => privy.logout()}>
         Log out
