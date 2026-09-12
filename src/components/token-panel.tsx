@@ -7,15 +7,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Campaign, TokenLifecycle } from "@/lib/campaigns";
+import type { CampaignSettlement } from "@/lib/types";
+import type { SettlementQuote } from "@/lib/settlement";
 import { hashscanAccountUrl, hashscanContractUrl, hashscanTxUrl } from "@/lib/hedera";
 import { HashScanAccount } from "@/components/hashscan-account";
-import { shortAddress } from "@/lib/money";
+import { hbarTinybars, shortAddress } from "@/lib/money";
 
 type Snapshot = {
   campaign: Campaign;
   approvals: { founderWallet: string | null; operator: boolean };
   payoutReady: boolean;
   operatorConfigured: boolean;
+  settlement: { quote: SettlementQuote; paid: CampaignSettlement };
   backerAccountId: string | null;
   suggestedBacker: {
     wallet: string;
@@ -89,7 +92,15 @@ export function TokenPanel({ slug }: { slug: string }) {
     return <p className="text-sm text-muted-foreground">Loading ATS bond…</p>;
   }
 
-  const { campaign, approvals, payoutReady, operatorConfigured, backerAccountId, suggestedBacker } = data;
+  const {
+    campaign,
+    approvals,
+    payoutReady,
+    operatorConfigured,
+    settlement,
+    backerAccountId,
+    suggestedBacker,
+  } = data;
   const lifecycle = campaign.tokenLifecycle;
   const canIssue = lifecycle === "draft" && operatorConfigured;
   const canTransfer = lifecycle === "issued" && Boolean(backerAccountId);
@@ -295,7 +306,98 @@ export function TokenPanel({ slug }: { slug: string }) {
           />
         )}
       </div>
+      <SettlementSection
+        slug={slug}
+        creatorWallet={campaign.creatorWallet}
+        settlement={settlement}
+        approved={payoutReady}
+        busy={busy}
+        onPay={post}
+      />
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
+    </div>
+  );
+}
+
+function SettlementSection({
+  slug,
+  creatorWallet,
+  settlement,
+  approved,
+  busy,
+  onPay,
+}: {
+  slug: string;
+  creatorWallet: string;
+  settlement: { quote: SettlementQuote; paid: CampaignSettlement };
+  approved: boolean;
+  busy: string | null;
+  onPay: (path: string, body: Record<string, string>) => Promise<void>;
+}) {
+  const { quote, paid } = settlement;
+  const path = `/api/campaigns/${slug}/payout`;
+
+  return (
+    <div className="space-y-3 border-t border-border pt-4">
+      <div className="flex items-center gap-2">
+        <h3 className="text-sm font-medium">Settlement</h3>
+        {paid.founder && paid.backers ? <Badge variant="secondary">Settled</Badge> : null}
+      </div>
+      {quote.raiseTinybars === 0 ? (
+        <p className="text-xs text-muted-foreground">
+          No live pledges yet — nothing to settle. Pledged totals on seed campaigns are
+          fixtures and are never paid out.
+        </p>
+      ) : (
+        <>
+          <p className="text-xs text-muted-foreground">
+            Raised {hbarTinybars(quote.raiseTinybars)} from {quote.backers.length}{" "}
+            {quote.backers.length === 1 ? "backer" : "backers"} · founder{" "}
+            {hbarTinybars(quote.founderTinybars)} ({quote.founderPercent}%) · backers{" "}
+            {hbarTinybars(quote.poolTinybars)} pro-rata.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            The raise leaves the treasury for {shortAddress(creatorWallet)}, the wallet on
+            the listing. If that address has no Hedera account yet, the transfer creates
+            one the same Ethereum key controls.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={Boolean(busy) || !approved || Boolean(paid.founder)}
+              onClick={() => onPay(path, { action: "release-founder" })}
+            >
+              {busy === "release-founder"
+                ? "Paying…"
+                : paid.founder
+                  ? "Founder paid"
+                  : `Pay founder ${hbarTinybars(quote.founderTinybars)}`}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={Boolean(busy) || !approved || Boolean(paid.backers)}
+              onClick={() => onPay(path, { action: "release-backers" })}
+            >
+              {busy === "release-backers"
+                ? "Paying…"
+                : paid.backers
+                  ? "Backers paid"
+                  : `Pay backers ${hbarTinybars(quote.poolTinybars)}`}
+            </Button>
+          </div>
+          {!approved ? (
+            <p className="text-xs text-muted-foreground">
+              Both approvals above are required before HBAR can leave the treasury.
+            </p>
+          ) : null}
+          <div className="space-y-1">
+            <TxLink id={paid.founder?.txId ?? null} label="Founder payout tx" />
+            <TxLink id={paid.backers?.txId ?? null} label="Backer payout tx" />
+          </div>
+        </>
+      )}
     </div>
   );
 }

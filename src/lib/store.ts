@@ -10,7 +10,7 @@ import {
   type Campaign,
   type TokenLifecycle,
 } from "@/lib/campaigns";
-import type { PayoutApprovals, Pledge } from "@/lib/types";
+import type { CampaignSettlement, PayoutApprovals, Pledge } from "@/lib/types";
 
 export type CampaignRuntime = {
   tokenId: string | null;
@@ -29,6 +29,7 @@ type StoredState = {
   created: Campaign[];
   pledges: Pledge[];
   approvals: Record<string, PayoutApprovals>;
+  payouts: Record<string, CampaignSettlement>;
   hcsTopicId: string | null;
   x402PayToAccountId: string | null;
 };
@@ -45,6 +46,7 @@ const RUNTIME_KEYS = [
 ] as const;
 
 const emptyApprovals: PayoutApprovals = { founderWallet: null, operator: false };
+const emptySettlement: CampaignSettlement = { founder: null, backers: null };
 
 let cache: StoredState | null = null;
 let cacheMtime = -1;
@@ -58,7 +60,16 @@ function dataFile() {
 }
 
 function emptyState(): StoredState {
-  return { version: 1, runtime: {}, created: [], pledges: [], approvals: {}, hcsTopicId: null, x402PayToAccountId: null };
+  return {
+    version: 1,
+    runtime: {},
+    created: [],
+    pledges: [],
+    approvals: {},
+    payouts: {},
+    hcsTopicId: null,
+    x402PayToAccountId: null,
+  };
 }
 
 function allCampaigns(state: StoredState) {
@@ -117,6 +128,7 @@ async function load(): Promise<StoredState> {
           }))
         : [],
       approvals: parsed.approvals ?? {},
+      payouts: parsed.payouts ?? {},
       hcsTopicId: parsed.hcsTopicId ?? null,
       x402PayToAccountId: parsed.x402PayToAccountId ?? null,
     };
@@ -287,6 +299,35 @@ export async function approveOperator(slug: string) {
 export async function payoutReady(slug: string) {
   const current = await getPayoutApprovals(slug);
   return Boolean(current.founderWallet && current.operator);
+}
+
+export async function getSettlement(slug: string): Promise<CampaignSettlement> {
+  const state = await load();
+  return state.payouts[slug] ?? emptySettlement;
+}
+
+export async function recordFounderPayout(
+  slug: string,
+  receipt: NonNullable<CampaignSettlement["founder"]>,
+) {
+  return withState((state) => {
+    const current = state.payouts[slug] ?? { ...emptySettlement };
+    const next = { ...current, founder: receipt };
+    state.payouts[slug] = next;
+    return next;
+  });
+}
+
+export async function recordBackerPayout(
+  slug: string,
+  receipt: NonNullable<CampaignSettlement["backers"]>,
+) {
+  return withState((state) => {
+    const current = state.payouts[slug] ?? { ...emptySettlement };
+    const next = { ...current, backers: receipt };
+    state.payouts[slug] = next;
+    return next;
+  });
 }
 
 export async function getHcsTopicId() {

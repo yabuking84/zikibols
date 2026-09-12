@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { listPledges, loadCampaign } from "@/lib/store";
-import { getPayoutApprovals, payoutReady } from "@/lib/payouts";
+import { getPayoutApprovals, getSettlement, payoutReady } from "@/lib/payouts";
 import { getBackerAccountId, isHederaOperatorConfigured } from "@/lib/hts";
 import { hederaAccountFromEvm } from "@/lib/hedera";
+import { settlementQuote } from "@/lib/settlement";
 
 export async function GET(
   _request: Request,
@@ -25,6 +26,10 @@ export async function GET(
     approvals,
     payoutReady: await payoutReady(slug),
     operatorConfigured: isHederaOperatorConfigured(),
+    settlement: {
+      quote: await settlementQuote(slug),
+      paid: await getSettlement(slug),
+    },
     backerAccountId,
     suggestedBacker: latest
       ? {

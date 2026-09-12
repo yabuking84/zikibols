@@ -4,10 +4,15 @@ import {
   approveFounder,
   approveOperator,
   getPayoutApprovals,
+  getSettlement,
   payoutReady,
+  recordBackerPayout,
+  recordFounderPayout,
 } from "@/lib/payouts";
-import { getBackerAccountId } from "@/lib/hts";
-import { payCouponToBacker, setCouponRecord, unpauseBond } from "@/lib/ats";
+import { getBackerAccountId, payHbarMany } from "@/lib/hts";
+import { payCouponToBacker, payHbarTo, setCouponRecord, unpauseBond } from "@/lib/ats";
+import { hederaAccountFromEvm } from "@/lib/hedera";
+import { assertPayable, settlementQuote } from "@/lib/settlement";
 
 export async function POST(
   request: NextRequest,
@@ -86,6 +91,99 @@ export async function POST(
         couponTxId: couponRecord.transactionId,
       });
       return NextResponse.json({ campaign: updated, ...paid, coupon: couponRecord });
+    }
+
+    if (body.action === "release-founder" || body.action === "release-backers") {
+      if (!(await payoutReady(slug))) {
+        return NextResponse.json(
+          {
+            error: "Need two approvals: Privy founder + treasury operator.",
+            approvals: await getPayoutApprovals(slug),
+          },
+          { status: 403 },
+        );
+      }
+
+      const settled = await getSettlement(slug);
+      const quote = await settlementQuote(slug);
+      const founderRun = body.action === "release-founder";
+
+      if (founderRun && settled.founder) {
+        return NextResponse.json(
+          { error: "The raise has already been sent to the founder." },
+          { status: 400 },
+        );
+      }
+      if (!founderRun && settled.backers) {
+        return NextResponse.json(
+          { error: "Backers have already been paid for this campaign." },
+          { status: 400 },
+        );
+      }
+
+      const amount = founderRun ? quote.founderTinybars : quote.poolTinybars;
+      try {
+        await assertPayable(amount);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Payout is not allowed";
+        return NextResponse.json({ error: message }, { status: 400 });
+      }
+
+      if (founderRun) {
+        const paid = await payHbarTo(
+          campaign.creatorWallet,
+          amount,
+          `Zikibols raise payout ${slug}`,
+        );
+        const receipt = {
+          to: paid.recipient,
+          tinybars: amount,
+          txId: paid.transactionId,
+          at: new Date().toISOString(),
+        };
+        await recordFounderPayout(slug, receipt);
+        return NextResponse.json({ founder: receipt, quote });
+      }
+
+      const recipients: { wallet: string; accountId: string | null; tinybars: number }[] = [];
+      for (const backer of quote.backers) {
+        if (backer.tinybars <= 0) continue;
+        recipients.push({
+          wallet: backer.wallet,
+          accountId: backer.hederaAccountId ?? (await hederaAccountFromEvm(backer.wallet)),
+          tinybars: backer.tinybars,
+        });
+      }
+      if (recipients.length === 0) {
+        return NextResponse.json(
+          { error: "The coupon pool is too small to split. Pledge more, or raise PAYOUT_FOUNDER_PERCENT headroom." },
+          { status: 400 },
+        );
+      }
+
+      const memo = `Zikibols backer coupon ${slug}`;
+      const native = recipients.filter((entry) => entry.accountId);
+      const txIds: string[] = [];
+      if (native.length > 0) {
+        const paid = await payHbarMany(
+          native.map((entry) => ({ accountId: entry.accountId as string, tinybars: entry.tinybars })),
+          memo,
+        );
+        txIds.push(paid.transactionId);
+      }
+      for (const entry of recipients.filter((row) => !row.accountId)) {
+        const paid = await payHbarTo(entry.wallet, entry.tinybars, memo);
+        txIds.push(paid.transactionId);
+      }
+
+      const receipt = {
+        count: recipients.length,
+        tinybars: recipients.reduce((sum, entry) => sum + entry.tinybars, 0),
+        txId: txIds[0],
+        at: new Date().toISOString(),
+      };
+      await recordBackerPayout(slug, receipt);
+      return NextResponse.json({ backers: receipt, txIds, quote });
     }
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });

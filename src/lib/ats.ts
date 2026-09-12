@@ -13,7 +13,7 @@ import {
   getOperatorAccountId,
   getOperatorPrivateKeyRaw,
   isHederaOperatorConfigured,
-  payCoupon,
+  payHbarTinybars,
 } from "@/lib/hts";
 
 /** ATS's published ESM entry omits .js extensions; load the CJS build instead. */
@@ -386,16 +386,25 @@ export async function setCouponRecord(securityId: string) {
 }
 
 export async function payCouponToBacker(backer: string) {
-  const trimmed = backer.trim();
+  return payHbarTo(backer, 1000, "Zikibols coupon payout");
+}
+
+/**
+ * HBAR out of the treasury to a Hedera account or an EVM address. An EVM
+ * address with no Hedera account yet is lazy-created by the transfer (HIP-583);
+ * the holder of that Ethereum key controls the new account.
+ */
+export async function payHbarTo(to: string, tinybars: number, memo: string) {
+  const trimmed = to.trim();
   if (isHederaAccountId(trimmed)) {
-    return payCoupon(trimmed);
+    return payHbarTinybars(trimmed, tinybars, memo);
   }
   if (!isEvmAddress(trimmed)) {
-    throw new Error("Coupon recipient must be a Hedera account or an EVM address.");
+    throw new Error("Payout recipient must be a Hedera account or an EVM address.");
   }
   const mapped = await hederaAccountFromEvmLocal(trimmed);
-  if (mapped) return payCoupon(mapped);
-  return payCouponViaEvm(trimmed);
+  if (mapped) return payHbarTinybars(mapped, tinybars, memo);
+  return payHbarViaEvm(trimmed, tinybars);
 }
 
 async function hederaAccountFromEvmLocal(evm: string) {
@@ -413,12 +422,12 @@ async function hederaAccountFromEvmLocal(evm: string) {
   }
 }
 
-/** 1000 tinybars as Hedera EVM wei (1 tinybar = 10^10 wei). */
-async function payCouponViaEvm(to: string) {
+/** Tinybars as Hedera EVM wei (1 tinybar = 10^10 wei). */
+async function payHbarViaEvm(to: string, tinybars: number) {
   const wallet = await ensureConnected();
   const tx = await wallet.sendTransaction({
     to,
-    value: BigInt(1000) * BigInt("10000000000"),
+    value: BigInt(tinybars) * BigInt("10000000000"),
   });
   await tx.wait();
   return { transactionId: tx.hash, recipient: to };

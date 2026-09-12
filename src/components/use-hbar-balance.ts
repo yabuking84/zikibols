@@ -33,7 +33,7 @@ export function useHbarBalance(address: string | undefined, refreshKey = 0) {
       })
       .catch(() => {
         if (!cancelled) {
-          setWei(0n);
+          setWei(BigInt(0));
           setReady(true);
         }
       });
@@ -45,7 +45,7 @@ export function useHbarBalance(address: string | undefined, refreshKey = 0) {
 
   return {
     wei,
-    empty: ready && wei === 0n,
+    empty: ready && wei === BigInt(0),
     ready,
   };
 }

@@ -12,6 +12,12 @@ export function hbar(value: number) {
   return `${new Intl.NumberFormat("en-US").format(value)} ℏ`;
 }
 
+/** Payout amounts are tinybars and can be far below 1 ℏ. */
+export function hbarTinybars(tinybars: number) {
+  const value = tinybars / 100_000_000;
+  return `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 8 }).format(value)} ℏ`;
+}
+
 export function shortAddress(address: string) {
   if (address.length < 12) return address;
   return `${address.slice(0, 6)}…${address.slice(-4)}`;

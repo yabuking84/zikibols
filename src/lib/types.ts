@@ -17,6 +17,12 @@ export type PayoutApprovals = {
   operator: boolean;
 };
 
+/** Settlement receipts. Present means already paid — the desk will not pay twice. */
+export type CampaignSettlement = {
+  founder: { to: string; tinybars: number; txId: string; at: string } | null;
+  backers: { count: number; tinybars: number; txId: string; at: string } | null;
+};
+
 export type AgentStep = {
   tool: "queryLending" | "buyFounderProfile" | "buyRiskReport" | "publishAudit";
   detail: string;

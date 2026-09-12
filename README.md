@@ -6,7 +6,7 @@ A backer should be able to fund an invoice bond or harvest share without a seed 
 
 Zikibols is that product: a crowdfunding app for **tokenized real-world cashflows**, built from scratch for [ETHOnline 2026](https://ethglobal.com/events/ethonline2026). One app, three load-bearing sponsor integrations — Privy for login and the pledge, The Graph for live diligence, Hedera for paid risk notes, an HCS audit trail, and the token lifecycle.
 
-It is not a general crowdfunding clone. A founder starts a **campaign** — a diligence-gated listing for **invoice receivables** or **revenue-share** assets. After funding, the campaign becomes a restricted token with a coupon that needs two people to release.
+It is not a general crowdfunding clone. A founder starts a **campaign** — a diligence-gated listing for **invoice receivables** or **revenue-share** assets. After funding, the campaign becomes a restricted token with a coupon that needs two people to release. The same two approvals also empty the raise: most of it to the founder, the rest split pro-rata across every pledger.
 
 Due diligence has two layers:
 
@@ -17,7 +17,7 @@ A backer can:
 
 1. Read the **campaign**, then **Check the creator** (live Graph + founder research + paid note) before sending money
 2. **Pledge HBAR** after logging in with email or social (no seed phrase)
-3. See the campaign turn into a **restricted Hedera token**, then a **coupon** that needs two people to release
+3. See the campaign turn into a **restricted Hedera token**, then a **coupon** that needs two people to release — and, on the same desk, **Pay founder** / **Pay backers** move the raise out of the treasury
 
 Two demo campaigns ship with the app; you can also **Start a campaign**. Missing keys fail on purpose — the dashboard never invents Graph, payment, or founder-search data.
 
@@ -55,6 +55,16 @@ These already landed on Hedera testnet. Harbor’s operator desk is **paid**; wa
 | x402 payTo | [`0.0.10421774`](https://hashscan.io/testnet/account/0.0.10421774) |
 | ATS factory / resolver | [`0.0.9213391`](https://hashscan.io/testnet/contract/0.0.9213391) / [`0.0.9212226`](https://hashscan.io/testnet/contract/0.0.9212226) |
 
+### Settlement evidence (MTB Full Suspension Bike Frame)
+
+Live raise of 13 ℏ from one Privy wallet. After 2-of-2, **Pay founder** sent 11.7 ℏ to the listing’s `creatorWallet` (HIP-583 created Hedera account `0.0.10502915`); **Pay backers** sent the remaining 1.3 ℏ in one transfer.
+
+| What | HashScan |
+|---|---|
+| Founder payout (11.7 ℏ) | [`0x756673af…`](https://hashscan.io/testnet/transaction/0x756673af86afb5def6170a9f747f10364b97bbfa5cf18f122ef49571b374b60b) |
+| Founder Hedera account | [`0.0.10502915`](https://hashscan.io/testnet/account/0.0.10502915) |
+| Backer payout (1.3 ℏ) | [`0.0.10418801@1789223023.415706643`](https://hashscan.io/testnet/transaction/0.0.10418801-1789223023-415706643) |
+
 ---
 
 ## What you get
@@ -64,7 +74,7 @@ These already landed on Hedera testnet. Harbor’s operator desk is **paid**; wa
 | **Privy** | Log in with email or social. You get an embedded wallet and pledge real HBAR on Hedera testnet. |
 | **The Graph** | One lending query against **Aave v3**, **Compound v3**, and **Spark Lend**. Same schema, three books. |
 | **Founder search** | Public-web profile from the **campaign's** founder **name** and optional **email** (Tavily). Missing key skips the profile; it does not invent one. |
-| **Hedera** | The agent **pays** for founder research and a written risk note (x402), then hashes both onto **HCS**. Operators issue an **ATS bond**, mint a share, pause it, then pay a coupon after a 2-of-2 sign-off. |
+| **Hedera** | The agent **pays** for founder research and a written risk note (x402), then hashes both onto **HCS**. Operators issue an **ATS bond**, mint a share, pause it, then after a 2-of-2 sign-off pay a coupon and **settle the raise** (founder share + pro-rata backer pool). |
 
 Two seed campaigns ship with the app:
 
@@ -290,8 +300,27 @@ Token issue / pause / coupon are **not** on this page. Those live on the Operato
 6. **Approve as founder** — log in with Privy and click once. This is founder 1.
 7. **Co-sign as treasury** — operator click. This is founder 2.
 8. **Release coupon** — enabled only after both approvals **and** the bond is paused. Writes an ATS coupon record, then sends a small HBAR coupon to the backer. HashScan links appear for both.
+9. **Pay founder** — sends the founder's share of the raise from the treasury to the wallet on the listing. Same two approvals; no pause required.
+10. **Pay backers** — splits the remaining pool pro-rata across every wallet that pledged.
 
-Coupon size is a lifecycle proof (tinybars), not a real yield calculation.
+Coupon size is a lifecycle proof (tinybars), not a real yield calculation. The **Settlement** block below it is the part that moves the raise.
+
+### Settlement — the raise leaves the treasury
+
+Pledges land in one treasury (`NEXT_PUBLIC_CAMPAIGN_TREASURY`, the operator account's EVM alias). The Settlement block on the operator desk splits what a campaign actually raised and sends it out:
+
+| Action | Amount | Where it goes |
+|---|---|---|
+| **Pay founder** | `PAYOUT_FOUNDER_PERCENT` of the raise (default 90%) | The campaign's `creatorWallet`. If that address has no Hedera account yet, the transfer lazy-creates one (HIP-583) that the same Ethereum key controls. |
+| **Pay backers** | The remainder | Every wallet that pledged, pro-rata by amount, as **one** atomic `TransferTransaction` — a single HashScan tx for the whole distribution. |
+
+The raise is computed from real pledge rows in `state.json` only, never from `pledgedHbar` (which carries the Harbor / Northwind seed fixtures). Both actions require the same 2-of-2 approvals, refuse to run twice, refuse amounts over `PAYOUT_MAX_HBAR`, and refuse to take the treasury below `PAYOUT_RESERVE_HBAR` — that balance still has to pay x402 and ATS gas. Math is in `src/lib/settlement.ts`; the transfers are `payHbarMany` / `payHbarTo`.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `PAYOUT_FOUNDER_PERCENT` | `90` | Founder's share of the raise; the rest is the backer coupon pool. |
+| `PAYOUT_MAX_HBAR` | `100` | Cap per payout action. |
+| `PAYOUT_RESERVE_HBAR` | `50` | HBAR the treasury must keep for x402 and ATS gas. |
 
 ### Who is the operator
 
@@ -301,7 +330,7 @@ In this demo it is whoever runs the app and put Hedera keys in `.env.local`. On-
 
 | Button | Who can press it |
 |---|---|
-| Issue / Mint / Pause / Co-sign as treasury / Release coupon | Anyone who opens `/campaigns/<slug>/operate`. There is **no operator login**. |
+| Issue / Mint / Pause / Co-sign as treasury / Release coupon / **Pay founder** / **Pay backers** | Anyone who opens `/campaigns/<slug>/operate`. There is **no operator login**. |
 | Approve as founder | Anyone **logged in with Privy**. The route stores that wallet string; it does **not** check it against the campaign’s `creatorWallet`. |
 
 That access model is a known gap (see [Known gaps](#known-gaps)): the 2-of-2 is stored flags, not a second key.
@@ -350,11 +379,11 @@ ATS can do much more (equity, dividends, voting, snapshots, lock, escrow, countr
 
 | Layer | Survives restart? | What it is |
 |---|---|---|
-| **On-chain (Hedera testnet)** | Yes | Privy HBAR pledges, two x402 payments, HCS topic messages, ATS bond issue / mint / pause / coupon. [HashScan](https://hashscan.io/testnet) is the source of truth. |
+| **On-chain (Hedera testnet)** | Yes | Privy HBAR pledges, two x402 payments, HCS topic messages, ATS bond issue / mint / pause / coupon, and settlement transfers (founder share + pro-rata backer pool). [HashScan](https://hashscan.io/testnet) is the source of truth. |
 | **The Graph** | Live query | Aave v3 + Compound v3 + Spark Lend via the Graph Gateway. One book failing does not kill Check this creator. No key → Check this creator fails. |
 | **Founder search** | Live query | Tavily public-web snippets for founder name + optional email. No key → profile step skipped, Check this creator still runs. |
 | **HCS audit** | Yes, on disk + chain | Topic id in `.data/state.json` or `HEDERA_HCS_TOPIC_ID`. Message is SHA-256 of the paid note and founder profile plus **both** x402 tx ids, not the full paragraph. Skipped if operator keys are missing. |
-| **Campaign book** | Yes, on disk | Pledges, created campaigns, token ids, backer account, x402 receiver, and 2-of-2 approvals in `.data/state.json` (or `ZIKIBOLS_DATA_PATH`). On a read-only host this falls back to process memory. |
+| **Campaign book** | Yes, on disk | Pledges, created campaigns, token ids, backer account, x402 receiver, 2-of-2 approvals, and settlement receipts (`payouts[slug]`) in `.data/state.json` (or `ZIKIBOLS_DATA_PATH`). On a read-only host this falls back to process memory. |
 | **Seed copy** | In git | Harbor Credit and Northwind Farms text, goals, and starting pledged totals in `src/lib/campaigns.ts`. |
 
 ---
@@ -369,6 +398,8 @@ Product debt we state up front, not hidden behavior. Plain-English walkthrough: 
 | "Approve as founder" is any logged-in Privy wallet | The payout route stores the wallet string; there is no signature and no check against the campaign's creator wallet. The 2-of-2 is stored flags, not a second key. |
 | One share per campaign | The mint goes to one saved address (latest pledger, or env), not every pledger. |
 | Coupon is tinybars | Lifecycle proof, not yield. Maturity does not gate release. ATS Mass Payout is not used. |
+| Settlement is a fixed percentage split | 90 / 10 out of the raise, on an operator click. No real-world event (invoice cleared, harvest sold) gates it, and the pool is not calculated yield. |
+| One treasury for every campaign | Hedera sees one account; which pledge belonged to which campaign is `campaignSlug` in `state.json`. Delete that file before settling and the split is lost. |
 | Seed totals are fixtures | Only in-app pledges have HashScan txs. |
 | Diligence can be skipped | Explicit **Pledge anyway** button. |
 | No automated tests | Verify on the deployed URL or `npm run dev`. |
@@ -390,6 +421,8 @@ Check **Integrations** on the dashboard first.
 | **Mint share** stays disabled | Issue the bond, then save a backer `0x` or `0.0.x`. After a Privy pledge, use **Use this address**. |
 | **Pause** fails | Issue first. If mint already ran, Pause should still work. |
 | **Release coupon** stays disabled | Pause first, then both **Approve as founder** and **Co-sign as treasury**. |
+| **Pay founder** / **Pay backers** stay disabled | Both approvals missing, already paid, or the campaign has no live pledges. |
+| Payout refused with a cap or reserve message | Raise `PAYOUT_MAX_HBAR`, lower `PAYOUT_RESERVE_HBAR`, or fund the treasury. |
 | Pledge sent but "campaign book could not be updated" | On-chain transfer succeeded; local `.data/state.json` write failed. HashScan still has the tx. |
 | Heuristic note instead of LLM note | Expected without `OPENAI_API_KEY`. |
 
@@ -421,6 +454,8 @@ Privy wallet ──HBAR tx──► campaign treasury (EVM 296)
 Operator desk (`/campaigns/[slug]/operate`)
          └──Bond.create / issue / pause──► ATS factory 0.0.9213391
          └──2-of-2──► ICoupon.setCoupon + payCoupon (HBAR to backer)
+         └──2-of-2──► settle the raise: founder share ──► creatorWallet
+                                        remainder ──► every pledger, pro-rata
 ```
 
 | Area | File |
@@ -439,6 +474,7 @@ Operator desk (`/campaigns/[slug]/operate`)
 | Create campaign | `src/app/campaigns/new/page.tsx`, `src/app/api/campaigns/route.ts` |
 | ATS bond lifecycle | `src/lib/ats.ts` |
 | HBAR coupon / x402 receiver | `src/lib/hts.ts` |
+| Settlement split | `src/lib/settlement.ts`, `src/app/api/campaigns/[slug]/payout/route.ts` |
 | Env badges | `src/lib/status.ts`, `src/components/integration-status.tsx` |
 
 Stack: Next.js 16, React 19, Privy, viem, ethers, `@hashgraph/sdk`, `@hashgraph/asset-tokenization-sdk`, `@x402/*`, Tailwind 4.
