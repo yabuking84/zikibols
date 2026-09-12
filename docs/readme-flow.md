@@ -138,16 +138,18 @@ Mint does **not** create the bond (that was Issue) and does **not** pay anyone.
 
 One stamp on the **whole** bond: “cannot be freely sold.” Not per backer.
 
-Mint already put each holder on the allowed list, so Pause does not add them again. After Pause, minting is closed.
+Mint already put each holder on the allowed list, so Pause does not add them again. After Pause, minting is closed **and the listing stops taking pledges**.
 
 ### 4. Money out
 
 | Button | What actually moves | Who gets it |
 |---|---|---|
 | **Pay founder** | 90% of this campaign’s **live** pledges | Wallet on the listing |
-| **Pay backers** | The other 10%, split by how much each pledged | Every pledger row |
+| **Pay backers** | The other 10%, split by how much each pledged | Every pledger **holding a minted share** |
 
-**Pay founder / Pay backers** are ordinary treasury HBAR sends. They read `pledges` in `state.json`, not ATS share balances. Someone who pledged but never got a mint can still get their cut.
+**Pay founder / Pay backers** are ordinary treasury HBAR sends. The amounts come from `pledges` in `state.json`, but **who** gets paid follows the bond: only backers you already minted a share to.
+
+**Pause first, then mint everyone first.** **Pay founder** and **Pay backers** both refuse until the bond is paused. If any pledger still has no share, **Pay backers** also opens a modal naming them and pays nobody.
 
 There is a cap (`PAYOUT_MAX_HBAR`) and a reserve the jar must keep for gas. Nothing checks that an invoice cleared or a crop sold — an operator decides it is time.
 
@@ -159,6 +161,8 @@ Issue bond  →  Mint share (each unique pledger)  →  Pause bond
 ```
 
 Issue first is the usual path. Mint cannot run before Issue. Mint cannot run after Pause.
+
+**Mint every pledger before you Pause.** The desk refuses to pause while anyone is unminted. Pause closes minting and new pledges, and **Pay backers** needs every pledger to hold a share.
 
 ATS is the printer and the rulebook. The bond is the locked receipt. The HBAR is the cash. More on the workshop: [readme-ats.md](./readme-ats.md).
 

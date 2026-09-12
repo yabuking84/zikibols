@@ -23,8 +23,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (!(await loadCampaign(body.campaignSlug))) {
+  const campaign = await loadCampaign(body.campaignSlug);
+  if (!campaign) {
     return NextResponse.json({ error: "Unknown campaign" }, { status: 404 });
+  }
+  if (campaign.tokenLifecycle === "frozen" || campaign.tokenLifecycle === "paid") {
+    return NextResponse.json(
+      {
+        error:
+          "This campaign is paused and is not accepting new pledges. The raise is closed.",
+      },
+      { status: 409 },
+    );
   }
 
   const pledge = await addPledge({

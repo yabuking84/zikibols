@@ -203,7 +203,7 @@ Mint stays off until the bond is issued, and it closes after **Pause**.
 What it does **not** do:
 
 - Create the bond. That was **Issue bond**.
-- Pay HBAR. **Pay founder** / **Pay backers** are later buttons.
+- Pay HBAR. **Pay founder** / **Pay backers** are later buttons — though **Pay backers** will not run until every pledger has been minted.
 - Size the share to the pledge. A 13 ℏ pledge still mints **1** unit, not 13. Alice who sent 13 ℏ and Bob who sent 50 ℏ each get **1** unit.
 
 **Mint to another address** is for a wallet that is not on the pledge list (or for `HEDERA_BACKER_ACCOUNT_ID`).
@@ -217,8 +217,8 @@ Issue bond  →  Mint share (each unique pledger)  →  Pause bond
 
 1. **Issue bond** — print the official form on Hedera. No share handed out. No cash moved. Once only.
 2. **Mint share** — one click per unique pledger (or an extra address). Puts them on the allowed list, then hands **1** unit. Same wallet cannot be minted twice. Closes after Pause.
-3. **Pause bond** — stamp “cannot be freely sold” on the **whole** bond. Not per backer. Each **Mint share** already put that holder on the allowed list.
-4. **Pay founder** / **Pay backers** — 90 / 10 of the live raise from the treasury. Reads `pledges`, not ATS balances, so an unminted pledger can still get their cut.
+3. **Pause bond** — stamp “cannot be freely sold” on the **whole** bond. Not per backer. Each **Mint share** already put that holder on the allowed list. The desk refuses until every pledger is minted. After this, minting is closed and the listing stops taking pledges.
+4. **Pay founder** / **Pay backers** — 90 / 10 of the live raise from the treasury. **Pay backers** only pays wallets holding a share, and refuses to run at all while any pledger is unminted (a modal lists them). Mint everyone **before** Pause, since Pause closes minting.
 
 The cash pile and the certificate pile are different. Full walk: [readme-flow.md](./readme-flow.md#operator-desk-and-the-bond).
 
@@ -240,7 +240,7 @@ What is still **off** the bond:
 | Which flyer, and how much | `.data/state.json` → `pledges` |
 | Which wallets already got a unit | `.data/state.json` → `runtime[slug].mints` |
 
-**Pay backers** still reads pledge rows, not ATS balances — so the cash split can include someone you have not minted yet. Amounts are not proportional (13 ℏ and 50 ℏ both get 1 unit).
+**Pay backers** pays only wallets that hold a unit, and will not run until every pledger has one. The **amount** each holder gets still comes from their pledge row, not from the share balance — the units themselves are not proportional (13 ℏ and 50 ℏ both get 1 unit).
 
 Honest list of other holes: [readme-limitations.md](./readme-limitations.md).
 

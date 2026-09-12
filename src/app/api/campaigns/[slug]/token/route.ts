@@ -11,6 +11,7 @@ import {
   pauseBond,
 } from "@/lib/ats";
 import { alreadyMinted } from "@/lib/mints";
+import { settlementQuote } from "@/lib/settlement";
 
 export async function POST(
   request: NextRequest,
@@ -115,6 +116,25 @@ export async function POST(
       }
       if (!campaign.tokenId) {
         return NextResponse.json({ error: "Issue the ATS bond first" }, { status: 400 });
+      }
+      const quote = await settlementQuote(slug);
+      const unminted = quote.backers.filter(
+        (backer) => !backer.minted && backer.pledgedTinybars > 0,
+      );
+      if (unminted.length > 0) {
+        return NextResponse.json(
+          {
+            error:
+              "Mint a share to every backer before pausing. Pause closes minting. Still without a share: " +
+              `${unminted.length} of ${quote.backers.length}.`,
+            unminted: unminted.map((backer) => ({
+              wallet: backer.wallet,
+              accountId: backer.hederaAccountId,
+              pledgedTinybars: backer.pledgedTinybars,
+            })),
+          },
+          { status: 409 },
+        );
       }
       // Mint already put each holder on the allowed list. Only list leftovers
       // (saved / env backer) so Pause does not re-add and trip SDK error 20013.

@@ -164,9 +164,9 @@ Imagine:
 1. Printing **one official share certificate** (**[Issue bond](./readme-ats.md#issue-bond-and-mint-share)**) — does not give anyone a share or move cash
 2. Sending **one copy to each unique pledger** (**[Mint share](./readme-ats.md#issue-bond-and-mint-share)**) — 1 unit each, not one per ℏ pledged; also puts that wallet on the allowed list
 3. (Optional) minting to another address that is not on the pledge list
-4. Stamping **“cannot be freely sold”** on the **whole** bond (**Pause bond**). Not per backer. After this, minting is closed
+4. Stamping **“cannot be freely sold”** on the **whole** bond (**Pause bond**). Not per backer. After this, minting is closed and the listing stops taking new pledges
 5. **Pay founder** — most of what this listing actually raised, to the wallet on the flyer
-6. **Pay backers** — the rest, split across every wallet that pledged, in proportion to what each sent (even if they never got a mint)
+6. **Pay backers** — the rest, split in proportion to what each sent, but only to the wallets that were handed a copy of the certificate in step 2. If anyone who pledged is still missing theirs, the desk shows a list and pays nobody
 
 The longer map of this desk: [readme-flow.md](./readme-flow.md#operator-desk-and-the-bond).
 
@@ -212,9 +212,11 @@ The Operator desk can empty **this listing’s** share of the jar:
 | Button | What leaves the jar | Where it goes |
 |---|---|---|
 | **Pay founder** | 90% of what this campaign actually raised | The Ethereum wallet printed on the listing. If that wallet has no Hedera pocket yet, the transfer creates one the same key controls. |
-| **Pay backers** | The other 10% | Every wallet that pledged, split by how much each sent, as **one** public receipt |
+| **Pay backers** | The other 10% | Every wallet that pledged **and holds a certificate**, split by how much each sent, as **one** public receipt |
 
 That is the baker getting cash-now and the neighbors getting a cut back. It is still play money, still an operator click — nothing checks that the couple paid or the tomatoes sold. A cap (100 ℏ per send) and a reserve (50 ℏ left in the jar for robot fees and printing the bond) stop a fat-finger from emptying the whole office.
+
+**Everyone needs their certificate first.** The office pays the cut to certificate holders, so if someone who pledged was never handed one, **Pay backers** shows their name and pays nobody. Hand out every copy **before** stamping the bond as locked — that stamp closes the handing-out step for good.
 
 The two demo campaigns’ starting totals are **fixtures**. Only pledges you make in the app are counted. The desk will not pay the same pot twice.
 

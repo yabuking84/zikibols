@@ -296,10 +296,10 @@ The desk is the office after money is in. Two piles: **cash** (pledged HBAR in t
 
 1. Open **Operator desk** in the sidebar, or go to `/campaigns/<slug>/operate`.
 2. **Issue bond** — deploys an ATS diamond clone on Hedera testnet (factory `0.0.9213391`). You get a contract id and HashScan link. Does not give anyone a share or move HBAR. Once only.
-3. **Mint share** — one unit per unique pledger (whitelist first). A 13 ℏ pledge still mints **1**, not 13. Repeat for each wallet; the same wallet cannot be minted twice. **Mint to another address** covers a `0x` / `0.0.x` that is not on the pledge list.
-4. **Pause bond** — one stamp on the **whole** bond (compliance control), not per backer. Each mint already put that holder on the whitelist. Minting is closed after this.
-5. **Pay founder** — 90% of this campaign’s live pledges from the treasury to the wallet on the listing.
-6. **Pay backers** — the other 10%, pro-rata across every `pledges` row (including someone you have not minted).
+3. **Mint share** — only after **Issue bond**. One unit per unique pledger (whitelist first). A 13 ℏ pledge still mints **1**, not 13. Repeat for each wallet; the same wallet cannot be minted twice. Clicking mint before Issue opens a modal. After Pause, minting is closed. **Mint to another address** covers a `0x` / `0.0.x` that is not on the pledge list.
+4. **Pause bond** — one stamp on the **whole** bond (compliance control), not per backer. Each mint already put that holder on the whitelist. The desk refuses to pause while any pledger is unminted. After this, minting is closed **and the campaign stops accepting pledges**.
+5. **Pay founder** — 90% of this campaign’s live pledges from the treasury to the wallet on the listing. The desk refuses until the bond is paused.
+6. **Pay backers** — the other 10%, pro-rata by pledge amount, to backers who **hold a minted share**. Pause first; every pledger must also be minted. If either is missing, a modal explains and nothing is paid.
 
 The **Settlement** block is the part that moves the raise.
 
@@ -312,9 +312,11 @@ Pledges land in one treasury (`NEXT_PUBLIC_CAMPAIGN_TREASURY`, the operator acco
 | Action | Amount | Where it goes |
 |---|---|---|
 | **Pay founder** | `PAYOUT_FOUNDER_PERCENT` of the raise (default 90%) | The campaign's `creatorWallet`. If that address has no Hedera account yet, the transfer lazy-creates one (HIP-583) that the same Ethereum key controls. |
-| **Pay backers** | The remainder | Every `pledges` row, pro-rata by amount (including someone not minted), as **one** atomic `TransferTransaction` — a single HashScan tx for the whole distribution. |
+| **Pay backers** | The remainder | Every pledger **holding a minted share**, pro-rata by pledge amount, as **one** atomic `TransferTransaction` — a single HashScan tx for the whole distribution. Blocked until every pledger has been minted. |
 
 The raise is computed from real pledge rows in `state.json` only, never from `pledgedHbar` (which carries the Harbor / Northwind seed fixtures). Both actions refuse to run twice, refuse amounts over `PAYOUT_MAX_HBAR`, and refuse to take the treasury below `PAYOUT_RESERVE_HBAR` — that balance still has to pay x402 and ATS gas. Math is in `src/lib/settlement.ts`; the transfers are `payHbarMany` / `payHbarTo`.
+
+**Mint every backer before paying them.** The backer pool follows the ATS bond: only a pledger holding a minted unit is paid. `settlementQuote` marks each backer `minted` from `runtime[slug].mints`, and `release-backers` returns `409` with the unminted wallets if any pledger is still without a share — so a partial distribution can never go out. Pledge amounts still set the split (one share each, but a 15 ℏ backer gets more than a 7 ℏ backer). **Pay founder** is unaffected; it pays the listing's wallet and ignores shares.
 
 | Variable | Default | Meaning |
 |---|---|---|
@@ -411,9 +413,13 @@ Check **Integrations** on the dashboard first.
 | Check runs Graph but HCS link is missing | Expected without operator/agent Hedera keys. Diligence still succeeds. |
 | Check runs Graph but fails on the paid note | x402 env incomplete, or the agent account has no testnet HBAR. Same payTo and agent is OK: the app creates a dedicated receiver on first check. |
 | **Issue bond** stays disabled | Operator/agent Hedera keys missing, or the bond is already issued. |
-| **Mint share** stays disabled | Issue the bond first. After pause, minting is closed. Each unique pledger has their own Mint button. |
-| **Pause** fails | Issue first. If mint already ran, Pause should still work. |
+| **Mint share** says issue first | The bond is still a draft. Click **Issue bond**, then mint. The route also refuses this. |
+| **Mint share** stays disabled | After pause, minting is closed. Each unique pledger has their own Mint button. |
+| **Pause bond** opens a modal | Some pledgers have no minted share. Mint them first — pause also closes new pledges. |
+| **Pledge** says the campaign is paused | Expected after **Pause bond**. The listing is not taking new backers. |
 | **Pay founder** / **Pay backers** stay disabled | Already paid, or the campaign has no live pledges. |
+| **Pay founder** / **Pay backers** say pause first | The bond is not paused yet. Mint every backer, then **Pause bond**. |
+| **Pay backers** opens a modal instead of paying | Some pledgers have no minted share. Mint each wallet listed in the modal, then click again. The route also refuses this with a `409`. |
 | Payout refused with a cap or reserve message | Raise `PAYOUT_MAX_HBAR`, lower `PAYOUT_RESERVE_HBAR`, or fund the treasury. |
 | Pledge sent but "campaign book could not be updated" | On-chain transfer succeeded; local `.data/state.json` write failed. HashScan still has the tx. |
 | Heuristic note instead of LLM note | Expected without `OPENAI_API_KEY`. |

@@ -94,6 +94,8 @@ function PledgeForm({
     [campaign.treasuryEvm],
   );
   const mineTotal = mine.reduce((sum, pledge) => sum + pledge.amountHbar, 0);
+  const closed =
+    campaign.tokenLifecycle === "frozen" || campaign.tokenLifecycle === "paid";
 
   useEffect(() => {
     if (!wallet?.address) {
@@ -114,6 +116,10 @@ function PledgeForm({
   }, [campaign.slug, wallet?.address, refreshKey]);
 
   async function pledge() {
+    if (closed) {
+      setStatus("This campaign is paused and is not accepting new pledges.");
+      return;
+    }
     if (!privy.authenticated) {
       privy.login();
       return;
@@ -177,13 +183,20 @@ function PledgeForm({
       <div>
         <h2 className="text-base font-medium">Pledge</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Log in with Privy, then send HBAR from the embedded wallet to the campaign treasury.
+          {closed
+            ? "This campaign is paused. New pledges are closed — the raise is locked for settlement."
+            : "Log in with Privy, then send HBAR from the embedded wallet to the campaign treasury."}
         </p>
         <div className="mt-2">
           <HashScanAccount evm={treasury} />
         </div>
       </div>
-      {!diligenceDone ? (
+      {closed ? (
+        <p className="text-sm text-muted-foreground">
+          The operator paused the bond. Existing pledges still count; this listing is not
+          taking new backers.
+        </p>
+      ) : !diligenceDone ? (
         <p className="text-sm text-muted-foreground">
           Run due diligence first. The agent should check this creator on-chain before you
           pledge.
@@ -219,6 +232,7 @@ function PledgeForm({
             type="button"
             size="sm"
             variant={amount === String(preset) ? "default" : "outline"}
+            disabled={closed}
             onClick={() => setAmount(String(preset))}
           >
             {preset} ℏ
@@ -231,6 +245,7 @@ function PledgeForm({
           id="pledge-amount"
           inputMode="decimal"
           value={amount}
+          disabled={closed}
           onChange={(event) => setAmount(event.target.value)}
         />
       </div>
@@ -240,6 +255,7 @@ function PledgeForm({
         loading={busy}
         disabled={
           busy ||
+          closed ||
           !diligenceDone ||
           walletEmpty ||
           Boolean(privy.authenticated && wallet && !balanceReady)
@@ -247,15 +263,17 @@ function PledgeForm({
       >
         {busy
           ? "Pledging…"
-          : !diligenceDone
-            ? "Check the creator first"
-            : walletEmpty
-              ? "Wallet is empty"
-              : privy.authenticated
-                ? "Pledge with Privy wallet"
-                : "Log in to pledge"}
+          : closed
+            ? "Campaign is paused"
+            : !diligenceDone
+              ? "Check the creator first"
+              : walletEmpty
+                ? "Wallet is empty"
+                : privy.authenticated
+                  ? "Pledge with Privy wallet"
+                  : "Log in to pledge"}
       </Button>
-      {!diligenceDone && onSkip ? (
+      {!closed && !diligenceDone && onSkip ? (
         <Button type="button" variant="ghost" className="w-full" onClick={onSkip}>
           Pledge anyway
         </Button>

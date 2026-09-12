@@ -110,6 +110,15 @@ export async function POST(
           { status: 400 },
         );
       }
+      if (campaign.tokenLifecycle !== "frozen" && campaign.tokenLifecycle !== "paid") {
+        return NextResponse.json(
+          {
+            error:
+              "Pause the bond before paying the founder or backers. Pause closes minting and new pledges.",
+          },
+          { status: 409 },
+        );
+      }
 
       // Backers are paid by ATS holding, so every pledger needs a minted unit
       // first. Refuse the whole run rather than quietly skipping people.

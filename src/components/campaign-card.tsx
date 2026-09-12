@@ -19,6 +19,8 @@ import { hbar } from "@/lib/money";
 
 export function CampaignCard({ campaign }: { campaign: Campaign }) {
   const funded = fundedPercent(campaign);
+  const closed =
+    campaign.tokenLifecycle === "frozen" || campaign.tokenLifecycle === "paid";
 
   return (
     <Link href={`/campaigns/${campaign.slug}`} className="block h-full">
@@ -44,7 +46,7 @@ export function CampaignCard({ campaign }: { campaign: Campaign }) {
         </CardContent>
         <CardFooter className="text-xs text-muted-foreground">
           {assetClassLabel(campaign.assetClass)} · {campaign.backers} backers ·{" "}
-          {campaign.daysLeft}d left
+          {closed ? "raise closed" : `${campaign.daysLeft}d left`}
         </CardFooter>
       </Card>
     </Link>

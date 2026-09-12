@@ -38,7 +38,9 @@ export function CampaignWorkspace({ campaign: initial }: { campaign: Campaign })
   }, [refresh]);
 
   const funded = fundedPercent(campaign);
-  const canPledge = Boolean(diligence) || skippedCheck;
+  const closed =
+    campaign.tokenLifecycle === "frozen" || campaign.tokenLifecycle === "paid";
+  const canPledge = !closed && (Boolean(diligence) || skippedCheck);
   const tokenized = campaign.tokenLifecycle !== "draft";
 
   return (
@@ -65,6 +67,7 @@ export function CampaignWorkspace({ campaign: initial }: { campaign: Campaign })
         </ol>
         <div className="space-y-2">
           <Badge variant="secondary">{assetClassLabel(campaign.assetClass)}</Badge>
+          {closed ? <Badge variant="outline">Paused — not accepting pledges</Badge> : null}
           <h1 className="text-2xl font-bold tracking-tight">{campaign.title}</h1>
           <p className="text-muted-foreground">{campaign.blurb}</p>
         </div>
@@ -134,7 +137,13 @@ export function CampaignWorkspace({ campaign: initial }: { campaign: Campaign })
             </div>
             <div className="space-y-1">
               <p className="text-xs text-muted-foreground">Status</p>
-              <p className="text-xs font-medium">{campaign.tokenLifecycle}</p>
+              <p className="text-xs font-medium">
+                {campaign.tokenLifecycle === "frozen"
+                  ? "Paused — raise closed"
+                  : campaign.tokenLifecycle === "paid"
+                    ? "Settled — raise closed"
+                    : campaign.tokenLifecycle}
+              </p>
             </div>
           </div>
           <Link

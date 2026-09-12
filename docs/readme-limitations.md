@@ -29,7 +29,7 @@ End to end, with play money:
 | **Log in** | Email / social via Privy. An embedded wallet is created. No seed phrase. |
 | **Pledge** | Real HBAR transfer on Hedera testnet from that wallet to the **campaign treasury**. A labeled row is written in `state.json` (`pledges`) so the progress bar knows which flyer it was for. |
 | **Operator desk** | [Issue bond](./readme-ats.md#issue-bond-and-mint-share) prints the ATS contract; [Mint share](./readme-ats.md#issue-bond-and-mint-share) hands **one** unit **per unique pledger** (a 13 ℏ pledge still mints 1, not 13); then pause. |
-| **Settlement** | **Pay founder** sends 90% of what this campaign actually raised to the wallet on the listing, and **Pay backers** splits the other 10% pro-rata across every `pledges` row (including someone you have not minted), in one transfer. Real HBAR, real HashScan txs, capped and refused if the treasury would drop below its gas reserve. |
+| **Settlement** | **Pay founder** sends 90% of what this campaign actually raised to the wallet on the listing, and **Pay backers** splits the other 10% pro-rata among backers **holding a minted share**, in one transfer. If any pledger has no share, a modal lists them and nothing is paid. Real HBAR, real HashScan txs, capped and refused if the treasury would drop below its gas reserve. |
 
 Missing keys fail on purpose. The dashboard does not invent Graph numbers, web hits, or payment receipts.
 
@@ -88,6 +88,7 @@ It is a local JSON clipboard, not a database, not ATS, not a per-campaign on-cha
 
 - **No operator login.** Anyone who can open `/campaigns/<slug>/operate` can click Issue / Mint / Pause / **Pay founder** / **Pay backers** if the server has keys. The cap and the reserve are what limit the damage, not a password.
 - **One unit per unique pledger, not per HBAR.** A 13 ℏ pledge does not mint 13 shares. **Pause** is one stamp on the whole bond, not per backer.
+- **Backers must be minted to be paid.** **Pay backers** pays share holders only and refuses to run while any pledger is unminted. The desk also refuses **Pause** until everyone is minted. After Pause, minting is closed and the listing stops taking pledges.
 
 ---
 

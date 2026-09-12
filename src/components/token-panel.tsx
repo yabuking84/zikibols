@@ -76,6 +76,8 @@ export function TokenPanel({ slug }: { slug: string }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [backerDraft, setBackerDraft] = useState("");
+  const [pauseBlocked, setPauseBlocked] = useState(false);
+  const [needIssue, setNeedIssue] = useState(false);
 
   const refresh = useCallback(async () => {
     const response = await fetch(`/api/campaigns/${slug}`);
@@ -132,9 +134,12 @@ export function TokenPanel({ slug }: { slug: string }) {
   const mintedCount = holders.filter((holder) => holder.mint).length;
   const pendingCount = holders.filter((holder) => !holder.mint).length;
   const canIssue = lifecycle === "draft" && operatorConfigured;
-  const canMint =
-    operatorConfigured && (lifecycle === "issued" || lifecycle === "transferred");
+  const issued = Boolean(campaign.tokenId) && (lifecycle === "issued" || lifecycle === "transferred");
+  const mintClosed = lifecycle === "frozen" || lifecycle === "paid";
   const canFreeze = lifecycle === "issued" || lifecycle === "transferred";
+  const unmintedPledgers = settlement.quote.backers.filter(
+    (backer) => !backer.minted && backer.pledgedTinybars > 0,
+  );
   const nextStep =
     lifecycle === "draft"
       ? "Next: issue the ATS bond."
@@ -191,11 +196,21 @@ export function TokenPanel({ slug }: { slug: string }) {
           variant="outline"
           loading={busy === "freeze"}
           disabled={Boolean(busy) || !canFreeze}
-          onClick={() => post(`/api/campaigns/${slug}/token`, { action: "freeze" })}
+          onClick={() =>
+            unmintedPledgers.length > 0
+              ? setPauseBlocked(true)
+              : post(`/api/campaigns/${slug}/token`, { action: "freeze" })
+          }
         >
           {busy === "freeze" ? "Pausing…" : "Pause bond"}
         </Button>
       </div>
+      {canFreeze && unmintedPledgers.length > 0 ? (
+        <p className="text-xs text-muted-foreground">
+          Pause waits until every pledger holds a share. Mint the remaining{" "}
+          {unmintedPledgers.length} first — pause closes minting.
+        </p>
+      ) : null}
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-medium">Mint shares</h3>
@@ -207,6 +222,11 @@ export function TokenPanel({ slug }: { slug: string }) {
           One ATS unit per unique pledger of this same bond. Each mint takes 30–60
           seconds.
         </p>
+        {!issued ? (
+          <p className="text-xs text-muted-foreground">
+            Issue the bond first. There is no contract to mint against until then.
+          </p>
+        ) : null}
         {holders.length === 0 ? (
           <p className="text-xs text-muted-foreground">
             No live pledges yet. After someone pledges they appear here, or mint to
@@ -241,8 +261,12 @@ export function TokenPanel({ slug }: { slug: string }) {
                       size="sm"
                       variant="outline"
                       loading={rowBusy}
-                      disabled={Boolean(busy) || !canMint || !target}
-                      onClick={() =>
+                      disabled={Boolean(busy) || mintClosed || !target}
+                      onClick={() => {
+                        if (!issued) {
+                          setNeedIssue(true);
+                          return;
+                        }
                         post(
                           `/api/campaigns/${slug}/token`,
                           {
@@ -251,8 +275,8 @@ export function TokenPanel({ slug }: { slug: string }) {
                             wallet: holder.wallet,
                           },
                           `transfer:${target}`,
-                        )
-                      }
+                        );
+                      }}
                     >
                       {rowBusy ? "Minting…" : "Mint share"}
                     </Button>
@@ -271,14 +295,18 @@ export function TokenPanel({ slug }: { slug: string }) {
               onChange={(event) => setBackerDraft(event.target.value)}
               placeholder="0x… or 0.0.12345"
               className="min-w-48 flex-1 font-mono"
-              disabled={!canMint}
+              disabled={mintClosed}
             />
             <Button
               size="sm"
               variant="outline"
               loading={busy === `transfer:${backerDraft.trim()}`}
-              disabled={Boolean(busy) || !canMint || !backerDraft.trim()}
-              onClick={() =>
+              disabled={Boolean(busy) || mintClosed || !backerDraft.trim()}
+              onClick={() => {
+                if (!issued) {
+                  setNeedIssue(true);
+                  return;
+                }
                 post(
                   `/api/campaigns/${slug}/token`,
                   {
@@ -287,8 +315,8 @@ export function TokenPanel({ slug }: { slug: string }) {
                     wallet: backerDraft.trim(),
                   },
                   `transfer:${backerDraft.trim()}`,
-                )
-              }
+                );
+              }}
             >
               {busy?.startsWith("transfer:") && busy === `transfer:${backerDraft.trim()}`
                 ? "Minting…"
@@ -320,10 +348,20 @@ export function TokenPanel({ slug }: { slug: string }) {
         slug={slug}
         creatorWallet={campaign.creatorWallet}
         settlement={settlement}
+        paused={lifecycle === "frozen" || lifecycle === "paid"}
         busy={busy}
         onPay={post}
       />
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {needIssue ? <IssueFirstDialog onClose={() => setNeedIssue(false)} /> : null}
+      {pauseBlocked ? (
+        <UnmintedBackersDialog
+          purpose="pause"
+          backers={unmintedPledgers}
+          total={settlement.quote.backers.length}
+          onClose={() => setPauseBlocked(false)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -332,22 +370,37 @@ function SettlementSection({
   slug,
   creatorWallet,
   settlement,
+  paused,
   busy,
   onPay,
 }: {
   slug: string;
   creatorWallet: string;
   settlement: { quote: SettlementQuote; paid: CampaignSettlement };
+  paused: boolean;
   busy: string | null;
   onPay: (path: string, body: Record<string, string>) => Promise<void>;
 }) {
   const [blocked, setBlocked] = useState(false);
+  const [needsPause, setNeedsPause] = useState(false);
   const { quote, paid } = settlement;
   const path = `/api/campaigns/${slug}/payout`;
   const unminted = quote.backers.filter(
     (backer) => !backer.minted && backer.pledgedTinybars > 0,
   );
   const mintedCount = quote.backers.length - unminted.length;
+
+  function tryPay(action: "release-founder" | "release-backers") {
+    if (!paused) {
+      setNeedsPause(true);
+      return;
+    }
+    if (action === "release-backers" && unminted.length > 0) {
+      setBlocked(true);
+      return;
+    }
+    onPay(path, { action });
+  }
 
   return (
     <div className="space-y-3 border-t border-border pt-4">
@@ -380,7 +433,7 @@ function SettlementSection({
               variant="outline"
               loading={busy === "release-founder"}
               disabled={Boolean(busy) || Boolean(paid.founder)}
-              onClick={() => onPay(path, { action: "release-founder" })}
+              onClick={() => tryPay("release-founder")}
             >
               {busy === "release-founder"
                 ? "Paying…"
@@ -393,11 +446,7 @@ function SettlementSection({
               variant="outline"
               loading={busy === "release-backers"}
               disabled={Boolean(busy) || Boolean(paid.backers)}
-              onClick={() =>
-                unminted.length > 0
-                  ? setBlocked(true)
-                  : onPay(path, { action: "release-backers" })
-              }
+              onClick={() => tryPay("release-backers")}
             >
               {busy === "release-backers"
                 ? "Paying…"
@@ -406,7 +455,12 @@ function SettlementSection({
                   : `Pay backers ${hbarTinybars(quote.poolTinybars)}`}
             </Button>
           </div>
-          {unminted.length > 0 ? (
+          {!paused ? (
+            <p className="text-xs text-muted-foreground">
+              Pause the bond before paying the founder or backers. Pause closes minting
+              and new pledges.
+            </p>
+          ) : unminted.length > 0 ? (
             <p className="text-xs text-muted-foreground">
               Only backers holding a share are paid. Mint the remaining{" "}
               {unminted.length} before Pay backers can run.
@@ -416,8 +470,12 @@ function SettlementSection({
             <TxLink id={paid.founder?.txId ?? null} label="Founder payout tx" />
             <TxLink id={paid.backers?.txId ?? null} label="Backer payout tx" />
           </div>
+          {needsPause ? (
+            <PauseFirstDialog onClose={() => setNeedsPause(false)} />
+          ) : null}
           {blocked ? (
             <UnmintedBackersDialog
+              purpose="payout"
               backers={unminted}
               total={quote.backers.length}
               onClose={() => setBlocked(false)}
@@ -429,12 +487,95 @@ function SettlementSection({
   );
 }
 
-/** Hard stop: backers are paid by ATS holding, so nobody is paid until all are minted. */
+function IssueFirstDialog({ onClose }: { onClose: () => void }) {
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/50"
+        aria-label="Close"
+        onClick={onClose}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="issue-first-title"
+        className="relative z-10 w-full max-w-lg rounded-xl border bg-popover p-5 shadow-lg"
+      >
+        <h4 id="issue-first-title" className="text-sm font-medium">
+          Issue the bond first
+        </h4>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Mint hands out a unit of this campaign’s ATS bond. There is no contract until
+          you click Issue bond. Issue once, then mint a share to each pledger.
+        </p>
+        <div className="mt-4 flex justify-end">
+          <Button size="sm" variant="outline" onClick={onClose}>
+            Close
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PauseFirstDialog({ onClose }: { onClose: () => void }) {
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/50"
+        aria-label="Close"
+        onClick={onClose}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pause-first-title"
+        className="relative z-10 w-full max-w-lg rounded-xl border bg-popover p-5 shadow-lg"
+      >
+        <h4 id="pause-first-title" className="text-sm font-medium">
+          Pause the campaign first
+        </h4>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Pay founder and Pay backers run after the bond is paused. Pause closes minting
+          and stops new pledges, so the raise is locked before HBAR leaves the treasury.
+          Mint every backer, click Pause bond, then settle.
+        </p>
+        <div className="mt-4 flex justify-end">
+          <Button size="sm" variant="outline" onClick={onClose}>
+            Close
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Hard stop: pause and Pay backers both wait until every pledger holds a share. */
 function UnmintedBackersDialog({
+  purpose,
   backers,
   total,
   onClose,
 }: {
+  purpose: "pause" | "payout";
   backers: SettlementQuote["backers"];
   total: number;
   onClose: () => void;
@@ -448,7 +589,7 @@ function UnmintedBackersDialog({
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button
         type="button"
         className="absolute inset-0 bg-black/50"
@@ -459,15 +600,15 @@ function UnmintedBackersDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="unminted-title"
-        className="relative mx-auto mt-[15vh] w-full max-w-lg rounded-xl border bg-popover p-5 shadow-lg"
+        className="relative z-10 w-full max-w-lg rounded-xl border bg-popover p-5 shadow-lg"
       >
         <h4 id="unminted-title" className="text-sm font-medium">
           Not all backers have been issued a share
         </h4>
         <p className="mt-2 text-xs text-muted-foreground">
-          The backer pool is paid to wallets that hold a share of this bond. These{" "}
-          {backers.length} of {total} pledged but have no share yet, so nothing has been
-          paid out. Mint a share to each of them above, then run Pay backers again.
+          {purpose === "pause"
+            ? `Pause closes minting and stops new pledges. These ${backers.length} of ${total} pledged but have no share yet. Mint a share to each of them, then pause.`
+            : `The backer pool is paid to wallets that hold a share of this bond. These ${backers.length} of ${total} pledged but have no share yet, so nothing has been paid out. Mint a share to each of them above, then run Pay backers again.`}
         </p>
         <ul className="mt-3 max-h-56 space-y-2 overflow-auto">
           {backers.map((backer) => (
