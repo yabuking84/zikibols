@@ -1,44 +1,47 @@
-# Public URL for judges: `fly launch --copy-config` then the commands in README.
-# Persistent volume is required — pledges and ATS ids live in /data/state.json.
+# fly.toml app configuration file generated for zikibols on 2026-09-12T18:16:26Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
 
-app = "zikibols-ethonline"
-primary_region = "iad"
+app = 'zikibols'
+primary_region = 'ams'
 
 [build]
-  dockerfile = "Dockerfile"
+  dockerfile = 'Dockerfile'
 
-[build.args]
-  NEXT_PUBLIC_PRIVY_APP_ID = "cmtslgrsc009k0bjo1acmxw8t"
-  NEXT_PUBLIC_CAMPAIGN_TREASURY = "0x7d5710637321f540b9ee8e1282c598d9b78f4f91"
+  [build.args]
+    NEXT_PUBLIC_CAMPAIGN_TREASURY = '0x7d5710637321f540b9ee8e1282c598d9b78f4f91'
+    NEXT_PUBLIC_PRIVY_APP_ID = 'cmtslgrsc009k0bjo1acmxw8t'
 
 [env]
-  PORT = "3000"
-  HOSTNAME = "0.0.0.0"
-  ZIKIBOLS_DATA_PATH = "/data/state.json"
-  HEDERA_PAY_TO_ACCOUNT = "0.0.10421774"
-  HEDERA_HCS_TOPIC_ID = "0.0.10421775"
-  NEXT_PUBLIC_CAMPAIGN_TREASURY = "0x7d5710637321f540b9ee8e1282c598d9b78f4f91"
+  HEDERA_HCS_TOPIC_ID = '0.0.10421775'
+  HEDERA_PAY_TO_ACCOUNT = '0.0.10421774'
+  HOSTNAME = '0.0.0.0'
+  NEXT_PUBLIC_CAMPAIGN_TREASURY = '0x7d5710637321f540b9ee8e1282c598d9b78f4f91'
+  PORT = '3000'
+  ZIKIBOLS_DATA_PATH = '/data/state.json'
+
+[[mounts]]
+  source = 'zikibols_data'
+  destination = '/data'
 
 [http_service]
-  internal_port = 3000
+  internal_port = 8080
   force_https = true
-  auto_stop_machines = "off"
+  auto_stop_machines = 'off'
   auto_start_machines = true
   min_machines_running = 1
-  processes = ["app"]
+  processes = ['app']
 
   [[http_service.checks]]
-    interval = "30s"
-    timeout = "5s"
-    grace_period = "20s"
-    method = "GET"
-    path = "/api/status"
+    interval = '30s'
+    timeout = '5s'
+    grace_period = '20s'
+    method = 'GET'
+    path = '/api/status'
 
 [[vm]]
-  memory = "1gb"
-  cpu_kind = "shared"
+  memory = '1gb'
+  cpu_kind = 'shared'
   cpus = 1
-
-[mounts]
-  source = "zikibols_data"
-  destination = "/data"
+  memory_mb = 256
