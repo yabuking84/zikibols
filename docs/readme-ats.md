@@ -40,7 +40,7 @@ A **token** here means a **digital certificate of ownership** (like a share cert
 
 **A government or company bond.** “Lend us money, we pay you interest on a schedule.” ATS has a **bond** type for that.
 
-**This app.** Harbor Credit’s invoice and Northwind’s harvest share. The Operator desk uses ATS to print one locked certificate, mint **one unit per unique pledger**, freeze it, then record a coupon — instead of inventing a joke coin. Sending the raise to the founder and splitting a cut back to every pledger is a **plain treasury transfer**, not an ATS Mass Payout. See [Settlement](./readme-non-technical.md#settlement--the-founders-payday). Units are **one each**, not sized to the pledge — [One bond, many holders](#one-bond-many-holders--what-ats-can-do-vs-what-we-do).
+**This app.** Harbor Credit’s invoice and Northwind’s harvest share. The Operator desk uses ATS to print one locked certificate, mint **one unit per unique pledger**, and freeze it — instead of inventing a joke coin. Sending the raise to the founder and splitting a cut back to every pledger is a **plain treasury transfer**, not an ATS Mass Payout. See [Settlement](./readme-non-technical.md#settlement--the-founders-payday). Units are **one each**, not sized to the pledge — [One bond, many holders](#one-bond-many-holders--what-ats-can-do-vs-what-we-do).
 
 ---
 
@@ -157,11 +157,11 @@ A small slice:
 | Mint to someone | Yes — **[Mint share](#issue-bond-and-mint-share)** — **one** unit **per unique pledger** |
 | Allowed list | Yes — backer is put on the list before mint |
 | Pause | Yes — **Pause bond** (whole bond). Allowed list is per mint. |
-| Coupon | Yes — write “coupon due,” then send a tiny payout |
+| Coupon | **Not used** on the desk. **Pay founder** / **Pay backers** are the payout |
 | Mass Payout (many holders at once) | **Not used.** **Pay founder** / **Pay backers** are ordinary HBAR sends from the treasury (`src/lib/settlement.ts`) |
 | Dividends, voting, splits, KYC website, escrow, full cap… | No, not in this demo |
 
-So ATS is a **full workshop**. Zikibols is one short job in that workshop: print a locked IOU, freeze it, then show that a coupon can leave after two people say yes. The founder’s payday is the same office jar, not another ATS tool.
+So ATS is a **full workshop**. Zikibols is one short job in that workshop: print a locked IOU, freeze it, then send the raise from the same office jar. The founder’s payday is that jar, not another ATS tool.
 
 ---
 
@@ -203,25 +203,22 @@ Mint stays off until the bond is issued, and it closes after **Pause**.
 What it does **not** do:
 
 - Create the bond. That was **Issue bond**.
-- Pay HBAR. The tiny coupon and **Pay backers** are later buttons.
+- Pay HBAR. **Pay founder** / **Pay backers** are later buttons.
 - Size the share to the pledge. A 13 ℏ pledge still mints **1** unit, not 13. Alice who sent 13 ℏ and Bob who sent 50 ℏ each get **1** unit.
 
-**Mint to another address** is for a wallet that is not on the pledge list (or for `HEDERA_BACKER_ACCOUNT_ID`). The tiny coupon crumb still goes to the **first** minted address (`backerAccountId`).
+**Mint to another address** is for a wallet that is not on the pledge list (or for `HEDERA_BACKER_ACCOUNT_ID`).
 
 ### Order on the desk
 
 ```
 Issue bond  →  Mint share (each unique pledger)  →  Pause bond
-        →  Approve as founder + Co-sign as treasury
-        →  Release coupon  and/or  Pay founder  and/or  Pay backers
+        →  Pay founder  and/or  Pay backers
 ```
 
 1. **Issue bond** — print the official form on Hedera. No share handed out. No cash moved. Once only.
 2. **Mint share** — one click per unique pledger (or an extra address). Puts them on the allowed list, then hands **1** unit. Same wallet cannot be minted twice. Closes after Pause.
 3. **Pause bond** — stamp “cannot be freely sold” on the **whole** bond. Not per backer. Each **Mint share** already put that holder on the allowed list.
-4. **Approve as founder** + **Co-sign as treasury** — two stored flags. Until both are yes, payout buttons stay off. This demo does not check that the Privy clicker is the listing’s real founder.
-5. **Release coupon** — crumb (0.00001 ℏ) to the **first** minted address only.
-6. **Pay founder** / **Pay backers** — 90 / 10 of the live raise from the treasury. Reads `pledges`, not ATS balances, so an unminted pledger can still get their cut.
+4. **Pay founder** / **Pay backers** — 90 / 10 of the live raise from the treasury. Reads `pledges`, not ATS balances, so an unminted pledger can still get their cut.
 
 The cash pile and the certificate pile are different. Full walk: [readme-flow.md](./readme-flow.md#operator-desk-and-the-bond).
 
@@ -243,7 +240,7 @@ What is still **off** the bond:
 | Which flyer, and how much | `.data/state.json` → `pledges` |
 | Which wallets already got a unit | `.data/state.json` → `runtime[slug].mints` |
 
-**Pay backers** still reads pledge rows, not ATS balances — so the cash split can include someone you have not minted yet. The tiny **Release coupon** crumb still goes to the **first** minted address, not to every holder. Amounts are not proportional (13 ℏ and 50 ℏ both get 1 unit).
+**Pay backers** still reads pledge rows, not ATS balances — so the cash split can include someone you have not minted yet. Amounts are not proportional (13 ℏ and 50 ℏ both get 1 unit).
 
 Honest list of other holes: [readme-limitations.md](./readme-limitations.md).
 

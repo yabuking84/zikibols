@@ -20,7 +20,7 @@ flowchart LR
   listing --> pledge[Pledge_HBAR]
   operator[Operator] --> desk[Operator_desk]
   desk --> bond[ATS_bond]
-  desk --> pay[Coupon_and_settlement]
+  desk --> pay[Settlement]
 ```
 
 **The founder** writes a listing: who they are, the story, how much they want.
@@ -49,9 +49,7 @@ flowchart TD
   pledge --> issue[Issue_ATS_bond]
   issue --> mint[Mint_one_share_per_pledger]
   mint --> pause[Pause_the_bond]
-  pause --> approve[Founder_plus_operator_yes]
-  approve --> coupon[Tiny_coupon]
-  approve --> settle[Pay_founder_and_backers]
+  pause --> settle[Pay_founder_and_backers]
 ```
 
 **Start a campaign** only creates a flyer on the website. No Hedera transaction. No bond yet.
@@ -60,7 +58,7 @@ flowchart TD
 
 **Pledge** is the real cash move: HBAR leaves the backer’s wallet and sits in **one treasury** (the office jar).
 
-The ATS bond is **not** that money. It is a locked receipt printed later. The **tiny coupon** is a crumb to prove a payout button works. **Pay founder / Pay backers** is when the raise actually leaves the jar.
+The ATS bond is **not** that money. It is a locked receipt printed later. **Pay founder / Pay backers** is when the raise actually leaves the jar.
 
 ---
 
@@ -107,11 +105,8 @@ flowchart TD
   bond -->|memo_zikibols_slug| listing
   listing -->|Mint| share[One_share_per_unique_pledger]
   share --> pause[Pause_cannot_freely_sell]
-  pause --> twoYes[Two_people_say_yes]
-  twoYes --> couponRecord[ATS_coupon_record]
-  couponRecord --> crumb[Tiny_HBAR_to_first_minted]
-  twoYes --> founderPay[90_percent_to_founder]
-  twoYes --> backerPay[10_percent_split_to_pledgers]
+  pause --> founderPay[90_percent_to_founder]
+  pause --> backerPay[10_percent_split_to_pledgers]
 ```
 
 Button-by-button: [Issue bond and Mint share](./readme-ats.md#issue-bond-and-mint-share).
@@ -137,7 +132,7 @@ You can mint another pledger. The same wallet cannot be minted twice. After the 
 
 **Mint to another address** is for a wallet that is not on the pledge list.
 
-Mint does **not** create the bond (that was Issue) and does **not** pay anyone. The tiny coupon crumb later goes to the **first** minted address only.
+Mint does **not** create the bond (that was Issue) and does **not** pay anyone.
 
 ### 3. Pause bond
 
@@ -145,18 +140,10 @@ One stamp on the **whole** bond: “cannot be freely sold.” Not per backer.
 
 Mint already put each holder on the allowed list, so Pause does not add them again. After Pause, minting is closed.
 
-### 4. Two people say yes
-
-- **Approve as founder** — whoever is logged in with Privy (this demo does not check they are the real founder)
-- **Co-sign as treasury** — the office / operator click
-
-Both are stored flags on the desk, not a second on-chain key. Until both are yes, payout buttons stay off.
-
-### 5. Money out (three different buttons)
+### 4. Money out
 
 | Button | What actually moves | Who gets it |
 |---|---|---|
-| **Release coupon** | A crumb (0.00001 ℏ) | First minted backer only |
 | **Pay founder** | 90% of this campaign’s **live** pledges | Wallet on the listing |
 | **Pay backers** | The other 10%, split by how much each pledged | Every pledger row |
 
@@ -168,8 +155,7 @@ There is a cap (`PAYOUT_MAX_HBAR`) and a reserve the jar must keep for gas. Noth
 
 ```
 Issue bond  →  Mint share (each unique pledger)  →  Pause bond
-        →  Approve as founder + Co-sign as treasury
-        →  Release coupon  and/or  Pay founder  and/or  Pay backers
+        →  Pay founder  and/or  Pay backers
 ```
 
 Issue first is the usual path. Mint cannot run before Issue. Mint cannot run after Pause.

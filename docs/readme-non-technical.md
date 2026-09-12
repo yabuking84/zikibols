@@ -33,12 +33,12 @@ This is a **hackathon prototype** on play money (Hedera testnet). It is not a ba
 
 **The backer** is you: you read the story, decide if they look honest, then send a small amount of play money.
 
-**The operator** is like the office clerk after the fundraiser. They print the official receipt (the locked share — not the thank-you), freeze it so it cannot be casually resold, send the thank-you payment, and — after the same two people say yes — empty most of this listing’s coins into the founder’s pocket and split the rest back across everyone who pledged. See [The locked receipt is not the thank-you](#the-locked-receipt-is-not-the-thank-you), [Settlement — the founder’s payday](#settlement--the-founders-payday), and [Who is the operator](#who-is-the-operator).
+**The operator** is like the office clerk after the fundraiser. They print the official receipt (the locked share), freeze it so it cannot be casually resold, then empty most of this listing’s coins into the founder’s pocket and split the rest back across everyone who pledged. See [The locked receipt is not the cash](#the-locked-receipt-is-not-the-cash), [Settlement — the founder’s payday](#settlement--the-founders-payday), and [Who is the operator](#who-is-the-operator).
 
 Two screens, two jobs:
 
 - **Campaign page** = “I want to fund this.”
-- **Operator desk** = “Issue the certificate, lock it, pay the coupon, then send the raise to the founder and a cut back to the backers.”
+- **Operator desk** = “Issue the certificate, lock it, then send the raise to the founder and a cut back to the backers.”
 
 ---
 
@@ -109,11 +109,11 @@ The contrast: baker already did the work and is owed a bill; farmer still has to
 
 ### In *this* app
 
-The choice is mostly a **label and a story**. Pledge, Check this creator, Operator desk, ATS bond, pause, and the tiny thank-you are the **same** for both. The code does not calculate invoice interest vs a % of tomatoes.
+The choice is mostly a **label and a story**. Pledge, Check this creator, Operator desk, ATS bond, pause, and settlement are the **same** for both. The code does not calculate invoice interest vs a % of tomatoes.
 
 Start a campaign → you pick one so the listing reads as “unpaid bill” or “crop share.” Under the hood both still become the same kind of locked ATS bond.
 
-Creating the campaign only prints the story. **Money only moves when someone pledges.** Pledges go to the campaign treasury (the operator’s play-money account), not into the baker/farmer wallet the moment the listing is created. After two people click yes, **Pay founder** sends most of *this listing’s* pledges to the wallet on the flyer, and **Pay backers** splits the rest pro-rata. The later speck (**Release coupon**) is still the fake “couple paid / stall sold” step — a proof crumb, not the raise.
+Creating the campaign only prints the story. **Money only moves when someone pledges.** Pledges go to the campaign treasury (the operator’s play-money account), not into the baker/farmer wallet the moment the listing is created. **Pay founder** sends most of *this listing’s* pledges to the wallet on the flyer, and **Pay backers** splits the rest pro-rata. Nothing checks that the couple paid or the stall sold — an operator decides it is time.
 
 ---
 
@@ -165,10 +165,8 @@ Imagine:
 2. Sending **one copy to each unique pledger** (**[Mint share](./readme-ats.md#issue-bond-and-mint-share)**) — 1 unit each, not one per ℏ pledged; also puts that wallet on the allowed list
 3. (Optional) minting to another address that is not on the pledge list
 4. Stamping **“cannot be freely sold”** on the **whole** bond (**Pause bond**). Not per backer. After this, minting is closed
-5. Waiting until **two people** say “yes, pay them” (founder + office). Those clicks are stored flags, not a second key
-6. Sending a **tiny thank-you** to the **first** minted backer (see below)
-7. **Pay founder** — most of what this listing actually raised, to the wallet on the flyer
-8. **Pay backers** — the rest, split across every wallet that pledged, in proportion to what each sent (even if they never got a mint)
+5. **Pay founder** — most of what this listing actually raised, to the wallet on the flyer
+6. **Pay backers** — the rest, split across every wallet that pledged, in proportion to what each sent (even if they never got a mint)
 
 The longer map of this desk: [readme-flow.md](./readme-flow.md#operator-desk-and-the-bond).
 
