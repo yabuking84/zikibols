@@ -10,6 +10,8 @@ import {
 } from "@/lib/campaigns";
 import type { AgentResult } from "@/lib/types";
 import { hbar } from "@/lib/money";
+import { hashscanContractUrl } from "@/lib/hedera";
+import { HashScanAccount } from "@/components/hashscan-account";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
@@ -36,7 +38,9 @@ export function CampaignWorkspace({ campaign: initial }: { campaign: Campaign })
   }, [refresh]);
 
   const funded = fundedPercent(campaign);
-  const canPledge = Boolean(diligence) || skippedCheck;
+  const closed =
+    campaign.tokenLifecycle === "frozen" || campaign.tokenLifecycle === "paid";
+  const canPledge = !closed && (Boolean(diligence) || skippedCheck);
   const tokenized = campaign.tokenLifecycle !== "draft";
 
   return (
@@ -63,6 +67,7 @@ export function CampaignWorkspace({ campaign: initial }: { campaign: Campaign })
         </ol>
         <div className="space-y-2">
           <Badge variant="secondary">{assetClassLabel(campaign.assetClass)}</Badge>
+          {closed ? <Badge variant="outline">Paused — not accepting pledges</Badge> : null}
           <h1 className="text-2xl font-bold tracking-tight">{campaign.title}</h1>
           <p className="text-muted-foreground">{campaign.blurb}</p>
         </div>
@@ -90,28 +95,57 @@ export function CampaignWorkspace({ campaign: initial }: { campaign: Campaign })
             {campaign.creatorEmail ? ` · ${campaign.creatorEmail}` : ""}
           </p>
           <a
-            className="inline-block text-sm text-primary underline-offset-4 hover:underline"
+            className="inline-block break-all font-mono text-xs text-primary underline-offset-4 hover:underline"
             href={`https://etherscan.io/address/${campaign.creatorWallet}`}
             target="_blank"
             rel="noreferrer"
           >
-            Creator on Etherscan
+            {campaign.creatorWallet}
           </a>
+          <p className="text-xs text-muted-foreground">
+            Ethereum wallet for The Graph diligence — not the Hedera campaign treasury.
+          </p>
         </section>
         <section className="rounded-xl border bg-card p-5">
           <h2 className="mb-3 text-base font-medium">Recent pledges</h2>
           <RecentPledges campaignSlug={campaign.slug} refreshKey={pledgeTick} />
         </section>
         <section className="rounded-xl border bg-card p-5">
-          <h2 className="text-base font-medium">Hedera asset</h2>
+          <h2 className="text-base font-medium">On Hedera</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            {campaign.tokenName} ({campaign.tokenSymbol}) is issued from the operator
-            desk: ATS bond with whitelist and pause, then a coupon after 2-of-2 sign-off.
+            Pledges go to this treasury. {campaign.tokenName} ({campaign.tokenSymbol})
+            is issued from the operator desk as an ATS bond.
           </p>
-          <p className="mt-2 text-xs font-medium">
-            Status: {campaign.tokenLifecycle}
-            {campaign.tokenId ? ` · ${campaign.tokenId}` : ""}
-          </p>
+          <div className="mt-3 space-y-3">
+            <HashScanAccount evm={campaign.treasuryEvm} />
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Bond contract</p>
+              {campaign.tokenId ? (
+                <a
+                  className="block break-all font-mono text-xs text-primary underline-offset-4 hover:underline"
+                  href={hashscanContractUrl(campaign.tokenId)}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {campaign.tokenId}
+                </a>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Not issued yet. Open the operator desk to put the bond on HashScan.
+                </p>
+              )}
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Status</p>
+              <p className="text-xs font-medium">
+                {campaign.tokenLifecycle === "frozen"
+                  ? "Paused — raise closed"
+                  : campaign.tokenLifecycle === "paid"
+                    ? "Settled — raise closed"
+                    : campaign.tokenLifecycle}
+              </p>
+            </div>
+          </div>
           <Link
             href={`/campaigns/${campaign.slug}/operate`}
             className={`${buttonVariants({ size: "sm" })} mt-4 w-fit`}

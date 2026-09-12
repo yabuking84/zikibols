@@ -1,3 +1,5 @@
+import type { ShareMint } from "@/lib/types";
+
 export type AssetClass = "invoice-receivable" | "revenue-share";
 
 export type TokenLifecycle =
@@ -28,9 +30,11 @@ export type Campaign = {
   issueTxId: string | null;
   transferTxId: string | null;
   freezeTxId: string | null;
+  unpauseTxId?: string | null;
   payoutTxId: string | null;
   couponTxId: string | null;
   backerAccountId: string | null;
+  mints: ShareMint[];
   treasuryEvm: `0x${string}`;
   imageHue: string;
 };
@@ -62,6 +66,14 @@ export const campaigns: Campaign[] = [
     payoutTxId: "0.0.10418801@1788882136.867281572",
     couponTxId: "0x35fd434f02a91089f878fa70848c7fa29a87afd63ae9bc52b98733cceb29c1ad",
     backerAccountId: "0x7d5710637321f540b9ee8e1282c598d9b78f4f91",
+    mints: [
+      {
+        wallet: "0x7d5710637321f540b9ee8e1282c598d9b78f4f91",
+        accountId: "0x7d5710637321f540b9ee8e1282c598d9b78f4f91",
+        txId: "0x3649110d7566cec1790e7cbc6f28ea93f17b649eced7083c3f5ab0fc11f6dc6a",
+        at: "",
+      },
+    ],
     treasuryEvm: "0x7d5710637321f540b9ee8e1282c598d9b78f4f91",
     imageHue: "32 42% 42%",
   },
@@ -91,10 +103,14 @@ export const campaigns: Campaign[] = [
     payoutTxId: null,
     couponTxId: null,
     backerAccountId: null,
+    mints: [],
     treasuryEvm: "0x7d5710637321f540b9ee8e1282c598d9b78f4f91",
     imageHue: "152 28% 32%",
   },
 ];
+
+/** Fixture listings in this file. Flip to true to show Harbor Credit and Northwind Farms again. */
+export const SHOW_SEED_CATALOG = false;
 
 /** Seed catalog lookup. Live pledged totals and token ids live in `src/lib/store.ts`. */
 export function getCampaign(slug: string) {
@@ -132,6 +148,12 @@ export const RESERVED_SLUGS = new Set(["new"]);
 /** Harbor Credit and Northwind Farms ship with fixture pledged totals. */
 export function isSeedCatalog(slug: string) {
   return campaigns.some((campaign) => campaign.slug === slug);
+}
+
+/** Listings the app should render. Seed fixtures stay on disk when this is empty. */
+export function listedCampaigns<T extends { slug: string }>(items: T[]): T[] {
+  if (SHOW_SEED_CATALOG) return items;
+  return items.filter((item) => !isSeedCatalog(item.slug));
 }
 
 export function slugifyCampaign(title: string) {

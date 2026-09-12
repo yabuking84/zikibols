@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export const maxDuration = 60;
-import { loadCampaign, patchCampaign } from "@/lib/store";
+import { getSettlement, loadCampaign, patchCampaign, recordShareMint } from "@/lib/store";
 import { getBackerAccountId } from "@/lib/hts";
 import {
   controlListBacker,
@@ -9,7 +9,10 @@ import {
   issueBond,
   mintToBacker,
   pauseBond,
+  unpauseBond,
 } from "@/lib/ats";
+import { alreadyMinted } from "@/lib/mints";
+import { settlementQuote } from "@/lib/settlement";
 
 export async function POST(
   request: NextRequest,
@@ -21,13 +24,17 @@ export async function POST(
     return NextResponse.json({ error: "Unknown campaign" }, { status: 404 });
   }
 
-  const body = (await request.json()) as { action?: string; accountId?: string };
+  const body = (await request.json()) as {
+    action?: string;
+    accountId?: string;
+    wallet?: string;
+  };
 
   try {
     if (body.action === "set-backer") {
-      if (campaign.tokenLifecycle !== "draft" && campaign.tokenLifecycle !== "issued") {
+      if (campaign.tokenLifecycle === "frozen" || campaign.tokenLifecycle === "paid") {
         return NextResponse.json(
-          { error: "Backer can only be set before the share is minted." },
+          { error: "Coupon recipient is locked after the bond is paused." },
           { status: 400 },
         );
       }
@@ -56,15 +63,24 @@ export async function POST(
     }
 
     if (body.action === "transfer") {
-      if (campaign.tokenLifecycle !== "issued") {
-        return NextResponse.json({ error: "Issue the ATS bond first" }, { status: 400 });
-      }
-      const recipient = campaign.backerAccountId || getBackerAccountId();
-      if (!recipient) {
+      if (campaign.tokenLifecycle !== "issued" && campaign.tokenLifecycle !== "transferred") {
         return NextResponse.json(
           {
             error:
-              "Set a backer Privy address (or Hedera 0.0.x / HEDERA_BACKER_ACCOUNT_ID) to mint one share.",
+              campaign.tokenLifecycle === "draft"
+                ? "Issue the ATS bond first"
+                : "Minting is closed after the bond is paused.",
+          },
+          { status: 400 },
+        );
+      }
+      const recipient =
+        body.accountId?.trim() || campaign.backerAccountId || getBackerAccountId() || "";
+      if (!isBackerId(recipient)) {
+        return NextResponse.json(
+          {
+            error:
+              "Pick a pledger, or type a Privy 0x / Hedera 0.0.x, to mint one share.",
           },
           { status: 400 },
         );
@@ -72,44 +88,106 @@ export async function POST(
       if (!campaign.tokenId) {
         return NextResponse.json({ error: "Issue the ATS bond first" }, { status: 400 });
       }
+      if (alreadyMinted(campaign.mints, recipient, body.wallet)) {
+        return NextResponse.json(
+          { error: "This backer already has a share. Mint to another pledger." },
+          { status: 400 },
+        );
+      }
       const transferred = await mintToBacker(campaign.tokenId, recipient);
-      const updated = await patchCampaign(slug, {
-        tokenLifecycle: "transferred",
-        transferTxId: transferred.transactionId,
-        backerAccountId: recipient,
-      });
-      return NextResponse.json({ campaign: updated, ...transferred });
+      const mint = {
+        wallet: body.wallet?.trim() || recipient,
+        accountId: recipient,
+        txId: transferred.transactionId,
+        at: new Date().toISOString(),
+      };
+      const updated = await recordShareMint(slug, mint);
+      return NextResponse.json({ campaign: updated, ...transferred, mint });
     }
 
     if (body.action === "freeze") {
-      const holder = campaign.backerAccountId || getBackerAccountId() || "";
       const canFreeze =
         campaign.tokenLifecycle === "transferred" ||
-        (campaign.tokenLifecycle === "issued" && !holder);
+        campaign.tokenLifecycle === "issued";
       if (!canFreeze) {
         return NextResponse.json(
-          { error: "Mint a share first, or pause immediately after issue if there is no backer." },
+          { error: "Issue the ATS bond first, then pause it." },
           { status: 400 },
         );
       }
       if (!campaign.tokenId) {
         return NextResponse.json({ error: "Issue the ATS bond first" }, { status: 400 });
       }
-      if (holder) {
-        try {
-          await controlListBacker(campaign.tokenId, holder);
-        } catch (error) {
-          const message = error instanceof Error ? error.message : "";
-          if (!/already in the control list/i.test(message)) throw error;
-        }
+      const quote = await settlementQuote(slug);
+      const unminted = quote.backers.filter(
+        (backer) => !backer.minted && backer.pledgedTinybars > 0,
+      );
+      if (unminted.length > 0) {
+        return NextResponse.json(
+          {
+            error:
+              "Mint a share to every backer before pausing. Pause closes minting. Still without a share: " +
+              `${unminted.length} of ${quote.backers.length}.`,
+            unminted: unminted.map((backer) => ({
+              wallet: backer.wallet,
+              accountId: backer.hederaAccountId,
+              pledgedTinybars: backer.pledgedTinybars,
+            })),
+          },
+          { status: 409 },
+        );
+      }
+      // Mint already put each holder on the allowed list. Only list leftovers
+      // (saved / env backer) so Pause does not re-add and trip SDK error 20013.
+      const leftovers = [campaign.backerAccountId || getBackerAccountId() || ""].filter(
+        (id) => id && !alreadyMinted(campaign.mints, id),
+      );
+      for (const holder of leftovers) {
+        await controlListBacker(campaign.tokenId, holder);
       }
       const paused = await pauseBond(campaign.tokenId);
       const updated = await patchCampaign(slug, {
         tokenLifecycle: "frozen",
         freezeTxId: paused.transactionId,
-        backerAccountId: holder || campaign.backerAccountId,
       });
       return NextResponse.json({ campaign: updated, ...paused, mode: "pause" });
+    }
+
+    if (body.action === "unpause") {
+      if (campaign.tokenLifecycle !== "frozen") {
+        return NextResponse.json(
+          {
+            error:
+              campaign.tokenLifecycle === "paid"
+                ? "This bond was already released through the coupon payout."
+                : "The bond is not paused.",
+          },
+          { status: 400 },
+        );
+      }
+      if (!campaign.tokenId) {
+        return NextResponse.json({ error: "Issue the ATS bond first" }, { status: 400 });
+      }
+      // Unpause reopens pledges, so a raise that already paid out can never come
+      // back — new pledges would arrive after their share of the split was sent.
+      const settled = await getSettlement(slug);
+      if (settled.founder || settled.backers) {
+        const done = [settled.founder && "the founder", settled.backers && "the backers"]
+          .filter(Boolean)
+          .join(" and ");
+        return NextResponse.json(
+          {
+            error: `A payout has already run for ${done}. Unpausing would reopen the raise to pledges that no payout covers.`,
+          },
+          { status: 409 },
+        );
+      }
+      const unpaused = await unpauseBond(campaign.tokenId);
+      const updated = await patchCampaign(slug, {
+        tokenLifecycle: campaign.mints.length > 0 ? "transferred" : "issued",
+        unpauseTxId: unpaused.transactionId,
+      });
+      return NextResponse.json({ campaign: updated, ...unpaused, mode: "unpause" });
     }
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });

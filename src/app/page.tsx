@@ -27,7 +27,7 @@ const steps = [
   },
   {
     title: "Tokenize and pay out",
-    body: "On the operator desk, issue an ATS bond, mint one share, pause it, then release a coupon after a 2-of-2 founder + operator sign-off.",
+    body: "On the operator desk, issue an ATS bond, mint one share per pledger, pause it, then pay the founder and split the rest pro-rata across backers.",
   },
 ];
 
@@ -46,7 +46,7 @@ export default async function Home() {
     {
       label: "Pledged",
       value: hbar(pledged),
-      hint: `${backers} backers (seed books + live pledges)`,
+      hint: `${backers} live backers`,
       icon: Wallet,
     },
     {
@@ -119,11 +119,17 @@ export default async function Home() {
             Start a campaign
           </Link>
         </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          {campaigns.map((campaign) => (
-            <CampaignCard key={campaign.slug} campaign={campaign} />
-          ))}
-        </div>
+        {campaigns.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No live campaigns yet. Start one to list it here.
+          </p>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {campaigns.map((campaign) => (
+              <CampaignCard key={campaign.slug} campaign={campaign} />
+            ))}
+          </div>
+        )}
       </section>
       <section className="space-y-3">
         <h2 className="text-lg font-semibold tracking-tight">Recent pledges</h2>

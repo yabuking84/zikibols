@@ -29,8 +29,8 @@ export default async function OperatorPage({
         <h1 className="text-2xl font-bold tracking-tight">{campaign.title}</h1>
         <p className="text-muted-foreground">
           {campaign.tokenLifecycle === "paid"
-            ? "This campaign’s coupon is already on HashScan. Use Northwind Farms or Start a campaign to walk Issue → Mint → Pause → Coupon live."
-            : "Issue the ATS bond, mint one unit to the backer, pause it, then release the coupon after founder + treasury sign-off. Backers pledge from the campaign page."}
+            ? "This campaign’s coupon is already on HashScan. Start a campaign to walk Issue → Mint → Pause → Coupon live."
+            : "Issue the ATS bond, mint one unit to each pledger, pause it, then settle the raise: most of it to the founder, the rest split pro-rata across backers. Backers pledge from the campaign page."}
         </p>
         <Link
           href={`/campaigns/${campaign.slug}`}

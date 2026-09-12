@@ -216,7 +216,7 @@ Working demo surface:
 - Dashboard with campaign stats, How a backer funds, Integrations (Ready / Needs env), campaign cards, recent pledges
 - Campaign workspace: story, progress, Check this creator, Pledge, Hedera asset panel, recent pledges
 - Create campaign (`/campaigns/new`): asset class, goal, creator name / optional email / wallet, persisted
-- Operator desk (`/campaigns/[slug]/operate`): backer address, issue / mint / pause, 2-of-2 coupon
+- Operator desk (`/campaigns/[slug]/operate`): backer address, issue / mint / pause, 2-of-2 coupon, settlement (raise to the founder, remainder pro-rata to backers)
 - Command search (⌘K), theme toggle, Privy login in the shell
 - Two seed campaigns: **Harbor Credit** (invoice bond) and **Northwind Farms** (harvest share)
 
@@ -232,7 +232,7 @@ Working backend (file-persisted, not a database):
 | `GET /api/campaigns`, `POST /api/campaigns` | Catalog + create |
 | `GET /api/campaigns/[slug]` | Campaign + approvals + operator/backer flags + suggested backer |
 | `POST /api/campaigns/[slug]/token` | set-backer / issue / mint / pause (ATS) |
-| `POST /api/campaigns/[slug]/payout` | approve-founder / approve-operator / release |
+| `POST /api/campaigns/[slug]/payout` | approve-founder / approve-operator / release / release-founder / release-backers |
 | `GET /api/status` | Env truth for the Integrations row |
 
 Stack: Next.js 16, React 19, Privy, viem, ethers, `@hashgraph/sdk`, `@hashgraph/asset-tokenization-sdk`, `@x402/{core,fetch,hedera,next}`, Tailwind 4.
@@ -264,6 +264,7 @@ Operator desk (`/campaigns/[slug]/operate`)
          └──Security.issue 1 unit ──► backer Privy EVM address
          └──pause / control list ──► compliance op
          └──2-of-2 ──► Coupon.setCoupon record + payCoupon (HBAR to backer)
+         └──2-of-2 ──► settle the raise: 90% ──► creatorWallet, 10% ──► every pledger pro-rata
 ```
 
 Seed campaign copy lives in `src/lib/campaigns.ts`. Created campaigns, pledges, token ids, HCS topic, x402 receiver, and payout approvals persist to `.data/state.json` via `src/lib/store.ts`.
@@ -318,8 +319,9 @@ If ATS had been killed on Wednesday, step 4 would have stayed on HTS and the Tok
 |---|---|
 | Service and consumer are the same app | The agent calls its own `/api/*` over HTTP. The 402 `curl` in the README shows the service exists independently. |
 | "Approve as founder" is any logged-in Privy wallet | `payout` route accepts a `wallet` string; no signature, no check against `creatorWallet`. Stored flags, not a second key. |
-| One share per campaign | Mint goes to the latest pledger, not every pledger |
+| Shares are not 1:1 with HBAR | Mint is 1 unit per unique pledger (`Security.issue` amount `1`). A 13 ℏ pledge does not mint 13 units. |
 | ATS coupon is a record, HBAR payout is ours | ATS distribution is the Mass Payout service; we do not run it. The 1000-tinybar HBAR transfer is lifecycle proof, not yield. |
+| Settlement is an operator click | `release-founder` / `release-backers` split the live raise 90 / 10 out of the shared treasury (`src/lib/settlement.ts`), capped by `PAYOUT_MAX_HBAR` and floored by `PAYOUT_RESERVE_HBAR`. No goal check, no maturity, no real-world cash event gates it. |
 | HTS path only: airdrop can land as *pending* | `TokenAirdropTransaction` succeeds even if the recipient has no free auto-association; freeze then fails. Rehearse once; ATS path avoids this. |
 | Seed totals are fixtures | Harbor Credit's 4,380 ℏ / 27 backers are hard-coded. Dashboard, cards, and campaign pages now label them as a seed book. |
 | Diligence can be skipped | Explicit "Pledge anyway"; call it out |
@@ -420,6 +422,7 @@ See [README.md](./README.md) for env vars and the demo flow. Copy `.env.example`
 
 | Area | Where |
 |---|---|
+| Settlement split | `src/lib/settlement.ts`, `src/app/api/campaigns/[slug]/payout/route.ts` |
 | Campaign fixtures | `src/lib/campaigns.ts` |
 | Persisted book | `src/lib/store.ts` (`.data/state.json`) |
 | Messari lending queries | `src/lib/graph.ts` |

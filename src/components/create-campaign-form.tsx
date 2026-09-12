@@ -203,7 +203,7 @@ export function CreateCampaignForm() {
         HBAR on Hedera testnet.
       </p>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      <Button type="submit" disabled={busy}>
+      <Button type="submit" loading={busy} disabled={busy}>
         {busy ? "Creating…" : "Create campaign"}
       </Button>
     </form>

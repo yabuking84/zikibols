@@ -100,14 +100,14 @@ export function CheckCreator({
           operator keys are set.
         </p>
       </div>
-      <Button onClick={run} disabled={loading}>
+      <Button onClick={run} loading={loading} disabled={loading}>
         {loading ? "Agent running…" : result ? "Run check again" : "Check this creator"}
       </Button>
       {error ? (
         <p className="text-sm text-destructive">{error}</p>
       ) : null}
       {result ? (
-        <div className="space-y-4 rounded-xl border border-border bg-muted/40 p-4">
+        <div className="space-y-4 rounded-xl border border-border bg-muted/40 p-4 max-w-[1000px] overflow-x-auto word-wrap">
           <div className="flex flex-wrap gap-2">
             {result.steps.map((step) => (
               <Badge key={step.tool + step.detail} variant="outline">
@@ -124,7 +124,7 @@ export function CheckCreator({
               {result.profile.sources.length ? (
                 <ul className="space-y-1 text-xs text-muted-foreground">
                   {result.profile.sources.map((source) => (
-                    <li key={source.url}>
+                    <li key={source.url} className="break-words">
                       <a
                         className="text-primary underline-offset-4 hover:underline"
                         href={source.url}
@@ -140,13 +140,13 @@ export function CheckCreator({
               ) : null}
             </div>
           ) : result.profile.skipped ? (
-            <p className="text-xs text-muted-foreground">{result.profile.skipped}</p>
+            <p className="text-xs text-muted-foreground break-words">{result.profile.skipped}</p>
           ) : null}
           <div>
             <h3 className="text-sm font-medium">Lending books</h3>
             <ul className="mt-1 space-y-1 text-xs text-muted-foreground">
               {result.lending.map((row) => (
-                <li key={row.protocol}>
+                <li key={row.protocol} className="break-words">
                   {row.label}: TVL {usd(row.totalValueLockedUSD)} · deposits{" "}
                   {usd(row.totalDepositBalanceUSD)} · borrows {usd(row.totalBorrowBalanceUSD)}
                 </li>
@@ -157,7 +157,7 @@ export function CheckCreator({
             <h3 className="text-sm font-medium">Wallet on Graph</h3>
             <ul className="mt-1 space-y-1 text-xs text-muted-foreground">
               {result.accounts.map((account) => (
-                <li key={account.protocol}>
+                <li key={account.protocol} className="break-words">
                   {account.protocol}: {account.openPositionCount} open ·{" "}
                   {account.liquidationCount} liquidations
                   {account.positions.length

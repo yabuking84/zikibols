@@ -160,15 +160,42 @@ export async function pauseCampaignToken(tokenId: string) {
 }
 
 export async function payCoupon(recipient: string, tinybars = 1000) {
+  return payHbarTinybars(recipient, tinybars, "Zikibols coupon payout");
+}
+
+export async function payHbarTinybars(recipient: string, tinybars: number, memo: string) {
+  const paid = await payHbarMany([{ accountId: recipient, tinybars }], memo);
+  return { transactionId: paid.transactionId, recipient };
+}
+
+/**
+ * One atomic TransferTransaction for every recipient, so a whole distribution
+ * is a single HashScan transaction.
+ */
+export async function payHbarMany(
+  entries: { accountId: string; tinybars: number }[],
+  memo: string,
+) {
+  const payable = entries.filter((entry) => entry.tinybars > 0);
+  if (payable.length === 0) {
+    throw new Error("No recipients with a non-zero amount.");
+  }
   const treasury = operatorAccountId();
+  const total = payable.reduce((sum, entry) => sum + entry.tinybars, 0);
+
   return withClient(async (client) => {
-    const amount = Hbar.fromTinybars(tinybars);
-    const response = await new TransferTransaction()
-      .addHbarTransfer(treasury, amount.negated())
-      .addHbarTransfer(recipient, amount)
-      .setTransactionMemo("Zikibols coupon payout")
-      .execute(client);
+    const transaction = new TransferTransaction()
+      .addHbarTransfer(treasury, Hbar.fromTinybars(total).negated())
+      .setTransactionMemo(memo.slice(0, 100));
+    for (const entry of payable) {
+      transaction.addHbarTransfer(entry.accountId, Hbar.fromTinybars(entry.tinybars));
+    }
+    const response = await transaction.execute(client);
     await response.getReceipt(client);
-    return { transactionId: response.transactionId.toString(), recipient };
+    return {
+      transactionId: response.transactionId.toString(),
+      recipients: payable.length,
+      tinybars: total,
+    };
   });
 }

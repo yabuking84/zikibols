@@ -13,7 +13,7 @@ import {
   getOperatorAccountId,
   getOperatorPrivateKeyRaw,
   isHederaOperatorConfigured,
-  payCoupon,
+  payHbarTinybars,
 } from "@/lib/hts";
 
 /** ATS's published ESM entry omits .js extensions; load the CJS build instead. */
@@ -324,21 +324,32 @@ export async function issueBond(campaign: Campaign) {
   };
 }
 
-export async function mintToBacker(securityId: string, backer: string) {
-  await ensureConnected();
+function alreadyOnControlList(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return /already in the control list|20013/i.test(message);
+}
+
+/** Mint already lists each backer. Calling add again just makes the SDK log 20013. */
+async function ensureOnControlList(securityId: string, backer: string) {
   const target = await resolveEvmAddress(backer);
   try {
-    await Security.addToControlList(
+    const added = await Security.addToControlList(
       new ControlListRequest({ securityId, targetId: target }),
     );
+    return { transactionId: txId(added), recipient: target, alreadyListed: false };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "";
-    if (!/already in the control list/i.test(message)) throw error;
+    if (!alreadyOnControlList(error)) throw error;
+    return { transactionId: "", recipient: target, alreadyListed: true };
   }
+}
+
+export async function mintToBacker(securityId: string, backer: string) {
+  await ensureConnected();
+  const listed = await ensureOnControlList(securityId, backer);
   const issued = await Security.issue(
-    new IssueRequest({ securityId, targetId: target, amount: "1" }),
+    new IssueRequest({ securityId, targetId: listed.recipient, amount: "1" }),
   );
-  return { transactionId: txId(issued), recipient: target };
+  return { transactionId: txId(issued), recipient: listed.recipient };
 }
 
 export async function pauseBond(securityId: string) {
@@ -354,11 +365,7 @@ export async function unpauseBond(securityId: string) {
 
 export async function controlListBacker(securityId: string, backer: string) {
   await ensureConnected();
-  const target = await resolveEvmAddress(backer);
-  const added = await Security.addToControlList(
-    new ControlListRequest({ securityId, targetId: target }),
-  );
-  return { transactionId: txId(added), recipient: target };
+  return ensureOnControlList(securityId, backer);
 }
 
 /** On-chain coupon entitlement. Not Mass Payout — HBAR still moves via payCoupon. */
@@ -386,16 +393,25 @@ export async function setCouponRecord(securityId: string) {
 }
 
 export async function payCouponToBacker(backer: string) {
-  const trimmed = backer.trim();
+  return payHbarTo(backer, 1000, "Zikibols coupon payout");
+}
+
+/**
+ * HBAR out of the treasury to a Hedera account or an EVM address. An EVM
+ * address with no Hedera account yet is lazy-created by the transfer (HIP-583);
+ * the holder of that Ethereum key controls the new account.
+ */
+export async function payHbarTo(to: string, tinybars: number, memo: string) {
+  const trimmed = to.trim();
   if (isHederaAccountId(trimmed)) {
-    return payCoupon(trimmed);
+    return payHbarTinybars(trimmed, tinybars, memo);
   }
   if (!isEvmAddress(trimmed)) {
-    throw new Error("Coupon recipient must be a Hedera account or an EVM address.");
+    throw new Error("Payout recipient must be a Hedera account or an EVM address.");
   }
   const mapped = await hederaAccountFromEvmLocal(trimmed);
-  if (mapped) return payCoupon(mapped);
-  return payCouponViaEvm(trimmed);
+  if (mapped) return payHbarTinybars(mapped, tinybars, memo);
+  return payHbarViaEvm(trimmed, tinybars);
 }
 
 async function hederaAccountFromEvmLocal(evm: string) {
@@ -413,12 +429,12 @@ async function hederaAccountFromEvmLocal(evm: string) {
   }
 }
 
-/** 1000 tinybars as Hedera EVM wei (1 tinybar = 10^10 wei). */
-async function payCouponViaEvm(to: string) {
+/** Tinybars as Hedera EVM wei (1 tinybar = 10^10 wei). */
+async function payHbarViaEvm(to: string, tinybars: number) {
   const wallet = await ensureConnected();
   const tx = await wallet.sendTransaction({
     to,
-    value: BigInt(1000) * BigInt("10000000000"),
+    value: BigInt(tinybars) * BigInt("10000000000"),
   });
   await tx.wait();
   return { transactionId: tx.hash, recipient: to };
