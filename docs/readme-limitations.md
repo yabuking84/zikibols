@@ -12,9 +12,9 @@ This is a **hackathon prototype** on Hedera **testnet** (play money). It is not 
 
 **The story:** Someone needs money now. Backers chip in. The founder gets that cash to do the work. Later, backers get a cut (invoice paid, crop sold).
 
-**The machine:** A listing goes on a website clipboard. Backers can look the founder up, then send play money into **one office jar**. The office can print a locked certificate and send a **crumb** back to one backer. The founder’s pocket is **not** filled by a button in this app.
+**The machine:** A listing goes on a website clipboard. Backers can look the founder up, then send play money into **one office jar**. The office can print a locked certificate, send a **crumb** back to one backer, and — after two clicks — empty most of that campaign’s share of the jar into the founder’s wallet and split the rest back across everyone who pledged.
 
-If those two feel like different products, that is the limitation. The demo proves login, live lookup, paid agent receipts, and an ATS bond lifecycle — not “Justin got paid for the bike frame.”
+What the machine still does **not** have is a reason to do it. Nothing checks that the invoice cleared or the crop sold; an operator decides. So the demo proves login, live lookup, paid agent receipts, an ATS bond lifecycle, and “Justin got paid” — but not “Justin got paid *because* the work was done.”
 
 ---
 
@@ -29,6 +29,7 @@ End to end, with play money:
 | **Log in** | Email / social via Privy. An embedded wallet is created. No seed phrase. |
 | **Pledge** | Real HBAR transfer on Hedera testnet from that wallet to the **campaign treasury**. A labeled row is written in `state.json` (`pledges`) so the progress bar knows which flyer it was for. |
 | **Operator desk** | Issue an **ATS bond**, mint **one** share to one backer, pause it, then after two clicks send a **tiny** coupon to that backer. |
+| **Settlement** | After the same two clicks: **Pay founder** sends 90% of what this campaign actually raised to the wallet on the listing, and **Pay backers** splits the other 10% pro-rata across every wallet that pledged, in one transfer. Real HBAR, real HashScan txs, capped and refused if the treasury would drop below its gas reserve. |
 
 Missing keys fail on purpose. The dashboard does not invent Graph numbers, web hits, or payment receipts.
 
@@ -40,10 +41,12 @@ Play-money receipts (pledges, x402 fees, HCS stamps, issued bonds) stay on [Hash
 
 ### Money
 
-- **Pay the founder the pledged pot.** Pledges sit in the operator treasury. There is no “send the raise to Justin” button.
-- **Pay every backer fairly.** Coupon is **0.00001 ℏ** to **one** saved address (usually the latest pledger), not calculated yield, not one payout per person.
-- **One jar per campaign.** All listings share `NEXT_PUBLIC_CAMPAIGN_TREASURY`. Hedera does not know “this 50 ℏ was for the bike frame.” The `campaignSlug` on the clipboard does.
-- **Wait for the real-world event.** No invoice clearing, no harvest sale, no 90-day maturity gate.
+- **Decide *when* the founder gets paid.** **Pay founder** exists now, but it fires when an operator clicks it. No invoice clearing, no harvest sale, no 90-day maturity gate, no goal check.
+- **Calculate a real coupon.** The backer split is a flat 10% of the raise handed back pro-rata, plus the separate 0.00001 ℏ lifecycle crumb to one address. Neither is yield.
+- **Pay out more than the cap.** Each payout refuses above `PAYOUT_MAX_HBAR` (100 ℏ) and refuses to take the treasury below `PAYOUT_RESERVE_HBAR` (50 ℏ), because that same jar pays the robot’s x402 fees and ATS gas. A 12,000 ℏ raise cannot actually be settled here.
+- **One jar per campaign.** All listings share `NEXT_PUBLIC_CAMPAIGN_TREASURY`. Hedera does not know “this 50 ℏ was for the bike frame.” The `campaignSlug` on the clipboard does — so if you delete the clipboard before settling, the split is gone even though the coins are not.
+- **Stop the same person approving twice.** Both signatures are stored flags, so settlement is only as strong as the desk that clicks them.
+- **Give every backer a share token.** Still one ATS unit to one saved address, even though the cash split covers everyone.
 
 ### ATS (the bond workshop)
 
@@ -55,7 +58,7 @@ ATS **can** do more than this app uses. This prototype is not “ATS cannot pay.
 | **Mass Payout** (many holders at once) | **Not used** |
 | Dividend, voting, redemption, escrow, country lists, full KYC website | **Not used** |
 | Store the Kickstarter page (story, city, who pledged) | **No.** ATS holds the **certificate**, not the flyer |
-| Empty the pledge jar into the **founder’s** pocket | **Not an ATS job.** That would be a treasury → founder transfer we never built |
+| Empty the pledge jar into the **founder’s** pocket | **Not an ATS job.** We do it ourselves: a plain treasury → founder HBAR transfer on **Pay founder** |
 
 **Start a campaign does not create an ATS bond.** Issue bond on the Operator desk does.
 
@@ -76,7 +79,7 @@ This file **is** the store for:
 
 - Campaigns you started (title, location, creator name, …)
 - Live pledge rows (who, how much, which slug, tx hash)
-- Operator progress (token id, pause, 2-of-2 clicks)
+- Operator progress (token id, pause, 2-of-2 clicks, which payouts already went out)
 
 Delete it and **those** are gone from the website. Harbor Credit / Northwind Farms live in **code** (`src/lib/campaigns.ts`) instead. Hedera receipts remain.
 
@@ -84,7 +87,7 @@ It is a local JSON clipboard, not a database, not ATS, not a per-campaign on-cha
 
 ### Access and shares
 
-- **No operator login.** Anyone who can open `/campaigns/<slug>/operate` can click Issue / Mint / Pause / Coupon if the server has keys.
+- **No operator login.** Anyone who can open `/campaigns/<slug>/operate` can click Issue / Mint / Pause / Coupon — and now **Pay founder** / **Pay backers** — if the server has keys. The cap and the reserve are what limit the damage, not a password.
 - **Approve as founder** is whoever is logged in with Privy — not checked against the listing’s real founder.
 - **One share** per campaign, not one per backer.
 
@@ -101,7 +104,9 @@ It is a local JSON clipboard, not a database, not ATS, not a per-campaign on-cha
 | “We checked” stamp | Hedera HCS (hash + payment ids) |
 | Official locked share | ATS on Hedera, **after** Issue bond |
 | Tiny thank-you | Hedera HBAR from treasury → **backer** |
-| Founder’s payday | **Not implemented** |
+| Founder’s payday | Hedera HBAR from treasury → **creator wallet** on **Pay founder** (90% of the raise) |
+| Backers’ cut | One Hedera transfer from treasury → **every pledger**, pro-rata (the other 10%) |
+| Who has been paid already | `.data/state.json` → `payouts[slug]`, so the desk will not pay twice |
 
 ---
 
@@ -111,7 +116,8 @@ It is a local JSON clipboard, not a database, not ATS, not a per-campaign on-cha
 2. A robot does **homework** (Graph + web). The shop pays for the pamphlet. A notary **stamps a fingerprint** (HCS).
 3. Customers put coins in **one office tin** (treasury). Someone writes names on a **clipboard** (which flyer).
 4. The office **prints one locked IOU** (ATS), freezes it, gives a **crumb** back to one customer.
-5. The baker **does not** get the tin emptied into his pocket. That step was never built.
+5. Two people sign, and the office **counts this flyer’s coins**: most go to the baker’s pocket, the rest go back to the customers in proportion to what each put in.
+6. Nobody checks whether the bread was ever baked. The office just decides it is time.
 
 ---
 
@@ -119,12 +125,12 @@ It is a local JSON clipboard, not a database, not ATS, not a per-campaign on-cha
 
 Not an exhaustive product spec — the holes this demo leaves obvious:
 
-- Send the raise to the **founder** (or a per-campaign escrow)
+- A **reason** to settle: goal reached, invoice cleared, harvest sold — not an operator clicking **Pay founder**
 - One treasury (or sub-account) **per** campaign, or an on-chain memo that Hedera can score without the clipboard
 - Persist listings and diligence somewhere that survives deleting `state.json` and closing the tab
 - Cap / charge **Check this creator** so the agent pocket cannot be drained
-- One share and a fair coupon **per** backer; optional ATS **Mass Payout**
+- One share **per** backer; calculated coupon instead of a flat percentage; optional ATS **Mass Payout**
 - Real operator login; founder approval that is actually the founder
-- Calculated yield, maturity, the real-world cash event
+- Refunds if a campaign never funds
 
-Until then: treat Zikibols as **Invest & Relax on testnet** — a path you can walk, not a company that owes Justin a payout.
+Until then: treat Zikibols as **Invest & Relax on testnet** — a path you can walk end to end, including the founder’s payday, but on play money and on an operator’s word rather than a real cash event.

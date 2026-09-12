@@ -40,7 +40,7 @@ A **token** here means a **digital certificate of ownership** (like a share cert
 
 **A government or company bond.** “Lend us money, we pay you interest on a schedule.” ATS has a **bond** type for that.
 
-**This app.** Harbor Credit’s invoice and Northwind’s harvest share. The Operator desk uses ATS to print one locked certificate, freeze it, then record a coupon — instead of inventing a joke coin.
+**This app.** Harbor Credit’s invoice and Northwind’s harvest share. The Operator desk uses ATS to print one locked certificate, freeze it, then record a coupon — instead of inventing a joke coin. Sending the raise to the founder and splitting a cut back to every pledger is a **plain treasury transfer**, not an ATS Mass Payout. See [Settlement](./readme-non-technical.md#settlement--the-founders-payday).
 
 ---
 
@@ -158,8 +158,9 @@ A small slice:
 | Allowed list | Yes — backer is put on the list before mint |
 | Pause | Yes — **Pause / control list** |
 | Coupon | Yes — write “coupon due,” then send a tiny payout |
+| Mass Payout (many holders at once) | **Not used.** **Pay founder** / **Pay backers** are ordinary HBAR sends from the treasury (`src/lib/settlement.ts`) |
 | Dividends, voting, splits, KYC website, escrow, full cap… | No, not in this demo |
 
-So ATS is a **full workshop**. Zikibols is one short job in that workshop: print a locked IOU, freeze it, then show that a payout can leave after two people say yes.
+So ATS is a **full workshop**. Zikibols is one short job in that workshop: print a locked IOU, freeze it, then show that a coupon can leave after two people say yes. The founder’s payday is the same office jar, not another ATS tool.
 
 Hedera’s own docs: [Asset Tokenization Studio](https://docs.hedera.com/solutions/tokenization/ats).
