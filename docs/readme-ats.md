@@ -210,9 +210,20 @@ What it does **not** do:
 
 ### Order on the desk
 
-1. **Issue bond** — print the official form on Hedera.
-2. **Mint share** — one click per unique pledger (or an extra address).
-3. **Pause bond** — stamp “cannot be freely sold” on the whole bond. Each **Mint share** already put that backer on the allowed list.
+```
+Issue bond  →  Mint share (each unique pledger)  →  Pause bond
+        →  Approve as founder + Co-sign as treasury
+        →  Release coupon  and/or  Pay founder  and/or  Pay backers
+```
+
+1. **Issue bond** — print the official form on Hedera. No share handed out. No cash moved. Once only.
+2. **Mint share** — one click per unique pledger (or an extra address). Puts them on the allowed list, then hands **1** unit. Same wallet cannot be minted twice. Closes after Pause.
+3. **Pause bond** — stamp “cannot be freely sold” on the **whole** bond. Not per backer. Each **Mint share** already put that holder on the allowed list.
+4. **Approve as founder** + **Co-sign as treasury** — two stored flags. Until both are yes, payout buttons stay off. This demo does not check that the Privy clicker is the listing’s real founder.
+5. **Release coupon** — crumb (0.00001 ℏ) to the **first** minted address only.
+6. **Pay founder** / **Pay backers** — 90 / 10 of the live raise from the treasury. Reads `pledges`, not ATS balances, so an unminted pledger can still get their cut.
+
+The cash pile and the certificate pile are different. Full walk: [readme-flow.md](./readme-flow.md#operator-desk-and-the-bond).
 
 ---
 

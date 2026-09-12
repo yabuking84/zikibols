@@ -32,7 +32,7 @@ Submitted to three partners (the ETHGlobal cap): **Hedera**, **The Graph**, **Pr
 | Track | The sentence | Verify |
 |---|---|---|
 | Hedera — AI & Agentic Payments | The agent **pays x402 twice** (founder search per query + risk note) through Blocky402; both tx ids and hashes land on **HCS**. | Two HashScan payment txs + HCS topic after **Check this creator** |
-| Hedera — Tokenization of Anything | ATS bond: issue → mint to Privy address → pause / control list → coupon record + 2-of-2 HBAR payout. | HashScan contract + pause tx + coupon record from the Operator desk |
+| Hedera — Tokenization of Anything | ATS bond: issue → mint one unit per unique pledger → pause the whole bond → coupon record + 2-of-2 HBAR payout. | HashScan contract + pause tx + coupon record from the Operator desk |
 | The Graph — Composable / Standardized | **One Messari query, three protocols** (Aave v3, Compound v3, Spark Lend). One book can fail without killing diligence. | Lending books in the check result; `src/lib/graph.ts` |
 | The Graph — AI Use Case (From Scratch) | The agent reasons over live Graph data, **gates the Pledge button** on the result, and pays for the note autonomously. | Check → Pledge flow; LLM note badge when `OPENAI_API_KEY` is set |
 | Privy — Best financial flow | Email login → embedded wallet → **HBAR transfer on Hedera** (chain 296). No extension, no seed phrase. | HashScan pledge tx + **Your pledges** |
@@ -231,7 +231,7 @@ These power the **Operator desk**. The operator (or agent) key must be an **ECDS
 | Variable | What it is |
 |---|---|
 | `HEDERA_OPERATOR_ACCOUNT_ID` + `HEDERA_OPERATOR_PRIVATE_KEY` | Optional. If unset, the app uses the **agent** pair above to issue ATS bonds and pay coupons. |
-| `HEDERA_BACKER_ACCOUNT_ID` | Optional default. Privy `0x` or Hedera `0.0.x` that receives **one share** if the operator desk has no backer saved. If neither is set, Pause still pauses the whole bond. |
+| `HEDERA_BACKER_ACCOUNT_ID` | Optional default. Privy `0x` or Hedera `0.0.x` used by **Mint to another address** if you type nothing. Each unique pledger still has their own Mint button. Pause still pauses the whole bond with or without this. |
 | `ATS_FACTORY_ID` / `ATS_RESOLVER_ID` | Optional. Defaults to the public testnet factory `0.0.9213391` and resolver `0.0.9212226` from Asset Tokenization Studio. |
 
 Fund the operator (or agent) account on testnet. Issuing a token and paying a coupon spends HBAR.
@@ -292,17 +292,21 @@ Token issue / pause / coupon are **not** on this page. Those live on the Operato
 
 ### As an operator
 
+The desk is the office after money is in. Two piles: **cash** (pledged HBAR in the treasury) and **certificate** (one ATS bond on Hedera). Pledging only fills the cash pile. Longer walk: [docs/readme-flow.md](./docs/readme-flow.md#operator-desk-and-the-bond).
+
 1. Open **Operator desk** in the sidebar, or go to `/campaigns/<slug>/operate`.
-2. **Issue bond** — deploys an ATS diamond clone on Hedera testnet (factory `0.0.9213391`). You get a contract id and HashScan link.
-3. **Mint share** — one unit per unique pledger (whitelist first). Repeat for each wallet. **Mint to another address** covers a `0x` / `0.0.x` that is not on the pledge list.
-4. **Pause bond** — pauses the whole bond (compliance control). Each mint already put that backer on the whitelist.
-6. **Approve as founder** — log in with Privy and click once. This is founder 1.
-7. **Co-sign as treasury** — operator click. This is founder 2.
-8. **Release coupon** — enabled only after both approvals **and** the bond is paused. Writes an ATS coupon record, then sends a small HBAR coupon to the backer. HashScan links appear for both.
-9. **Pay founder** — sends the founder's share of the raise from the treasury to the wallet on the listing. Same two approvals; no pause required.
-10. **Pay backers** — splits the remaining pool pro-rata across every wallet that pledged.
+2. **Issue bond** — deploys an ATS diamond clone on Hedera testnet (factory `0.0.9213391`). You get a contract id and HashScan link. Does not give anyone a share or move HBAR. Once only.
+3. **Mint share** — one unit per unique pledger (whitelist first). A 13 ℏ pledge still mints **1**, not 13. Repeat for each wallet; the same wallet cannot be minted twice. **Mint to another address** covers a `0x` / `0.0.x` that is not on the pledge list.
+4. **Pause bond** — one stamp on the **whole** bond (compliance control), not per backer. Each mint already put that holder on the whitelist. Minting is closed after this.
+5. **Approve as founder** — log in with Privy and click once. This is founder 1. Stored flag; not checked against the listing’s `creatorWallet`.
+6. **Co-sign as treasury** — operator click. This is founder 2. Also a stored flag, not a second on-chain key.
+7. **Release coupon** — enabled only after both approvals **and** the bond is paused. Writes an ATS coupon record, then sends a 0.00001 ℏ crumb to the **first** minted backer. HashScan links appear for both.
+8. **Pay founder** — 90% of this campaign’s live pledges from the treasury to the wallet on the listing. Same two approvals.
+9. **Pay backers** — the other 10%, pro-rata across every `pledges` row (including someone you have not minted).
 
 Coupon size is a lifecycle proof (tinybars), not a real yield calculation. The **Settlement** block below it is the part that moves the raise.
+
+**On HashScan:** pledge txs, the bond, each mint, pause, payouts. **Only in `state.json`:** the story, goal, progress bar, which pledge belongs to which campaign, and who already got a unit.
 
 ### Settlement — the raise leaves the treasury
 
@@ -311,7 +315,7 @@ Pledges land in one treasury (`NEXT_PUBLIC_CAMPAIGN_TREASURY`, the operator acco
 | Action | Amount | Where it goes |
 |---|---|---|
 | **Pay founder** | `PAYOUT_FOUNDER_PERCENT` of the raise (default 90%) | The campaign's `creatorWallet`. If that address has no Hedera account yet, the transfer lazy-creates one (HIP-583) that the same Ethereum key controls. |
-| **Pay backers** | The remainder | Every wallet that pledged, pro-rata by amount, as **one** atomic `TransferTransaction` — a single HashScan tx for the whole distribution. |
+| **Pay backers** | The remainder | Every `pledges` row, pro-rata by amount (including someone not minted), as **one** atomic `TransferTransaction` — a single HashScan tx for the whole distribution. |
 
 The raise is computed from real pledge rows in `state.json` only, never from `pledgedHbar` (which carries the Harbor / Northwind seed fixtures). Both actions require the same 2-of-2 approvals, refuse to run twice, refuse amounts over `PAYOUT_MAX_HBAR`, and refuse to take the treasury below `PAYOUT_RESERVE_HBAR` — that balance still has to pay x402 and ATS gas. Math is in `src/lib/settlement.ts`; the transfers are `payHbarMany` / `payHbarTo`.
 
@@ -368,7 +372,7 @@ ATS can do much more (equity, dividends, voting, snapshots, lock, escrow, countr
 | **Pause** | Freeze all transfers — the compliance / lifecycle op. | `Security.pause` |
 | **Unpause** | Unfreeze right before writing the coupon so the diamond call can run. | `IPause.unpause` on release |
 | **Coupon record** | On-chain “this bond is due a coupon.” Not calculated yield. | `ICoupon.setCoupon` |
-| **Coupon HBAR** | Tiny payout (1000 tinybars) to the saved backer as distribution proof. Not ATS Mass Payout. | `payCoupon` in `src/lib/hts.ts` |
+| **Coupon HBAR** | Tiny payout (1000 tinybars) to the **first minted** backer as distribution proof. Not ATS Mass Payout. | `payCoupon` in `src/lib/hts.ts` |
 
 **Not used:** equity, dividends, voting (`erc20VotesActivated: false`), partitions, clearing, lock, snapshots, stock splits, redemption, country control lists, Terminal3 KYC, ATS Mass Payout.
 

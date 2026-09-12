@@ -29,11 +29,11 @@ End to end, with play money:
 | **Log in** | Email / social via Privy. An embedded wallet is created. No seed phrase. |
 | **Pledge** | Real HBAR transfer on Hedera testnet from that wallet to the **campaign treasury**. A labeled row is written in `state.json` (`pledges`) so the progress bar knows which flyer it was for. |
 | **Operator desk** | [Issue bond](./readme-ats.md#issue-bond-and-mint-share) prints the ATS contract; [Mint share](./readme-ats.md#issue-bond-and-mint-share) hands **one** unit **per unique pledger** (a 13 ℏ pledge still mints 1, not 13); then pause, and after two clicks send a **tiny** coupon to the first minted address. |
-| **Settlement** | After the same two clicks: **Pay founder** sends 90% of what this campaign actually raised to the wallet on the listing, and **Pay backers** splits the other 10% pro-rata across every wallet that pledged, in one transfer. Real HBAR, real HashScan txs, capped and refused if the treasury would drop below its gas reserve. |
+| **Settlement** | After the same two clicks: **Pay founder** sends 90% of what this campaign actually raised to the wallet on the listing, and **Pay backers** splits the other 10% pro-rata across every `pledges` row (including someone you have not minted), in one transfer. Real HBAR, real HashScan txs, capped and refused if the treasury would drop below its gas reserve. |
 
 Missing keys fail on purpose. The dashboard does not invent Graph numbers, web hits, or payment receipts.
 
-Play-money receipts (pledges, x402 fees, HCS stamps, issued bonds) stay on [HashScan](https://hashscan.io/testnet) even if the website notebook is deleted.
+Play-money receipts (pledges, x402 fees, HCS stamps, issued bonds, mints, pause, payouts) stay on [HashScan](https://hashscan.io/testnet) even if the website notebook is deleted. The story, goal, progress bar, and “which pledge was for which flyer” live only in `state.json`.
 
 ---
 
@@ -89,7 +89,7 @@ It is a local JSON clipboard, not a database, not ATS, not a per-campaign on-cha
 
 - **No operator login.** Anyone who can open `/campaigns/<slug>/operate` can click Issue / Mint / Pause / Coupon — and now **Pay founder** / **Pay backers** — if the server has keys. The cap and the reserve are what limit the damage, not a password.
 - **Approve as founder** is whoever is logged in with Privy — not checked against the listing’s real founder.
-- **One unit per unique pledger, not per HBAR.** A 13 ℏ pledge does not mint 13 shares. The coupon crumb still goes to the first minted address.
+- **One unit per unique pledger, not per HBAR.** A 13 ℏ pledge does not mint 13 shares. **Pause** is one stamp on the whole bond, not per backer. The coupon crumb still goes to the first minted address.
 
 ---
 
@@ -103,7 +103,7 @@ It is a local JSON clipboard, not a database, not ATS, not a per-campaign on-cha
 | Diligence essay | This tab (`sessionStorage`) |
 | “We checked” stamp | Hedera HCS (hash + payment ids) |
 | Official locked share | ATS on Hedera, **after** Issue bond; who got a unit is `runtime[slug].mints` |
-| Tiny thank-you | Hedera HBAR from treasury → **backer** |
+| Tiny thank-you | Hedera HBAR from treasury → **first minted backer** |
 | Founder’s payday | Hedera HBAR from treasury → **creator wallet** on **Pay founder** (90% of the raise) |
 | Backers’ cut | One Hedera transfer from treasury → **every pledger**, pro-rata (the other 10%) |
 | Who has been paid already | `.data/state.json` → `payouts[slug]`, so the desk will not pay twice |

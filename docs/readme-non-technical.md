@@ -150,18 +150,27 @@ You get a public receipt link so you can see the payment landed. The site also u
 
 ### 4. The operator desk (back office)
 
-This is not for backers. It is the page after money came in.
+This is not for backers. It is the page after money came in (`/campaigns/<slug>/operate`).
+
+Two piles. Pledging only fills the cash pile.
+
+| Pile | What it is | Where it sits |
+|---|---|---|
+| **Cash** | The HBAR people sent | One treasury wallet |
+| **Certificate** | A locked ATS receipt / IOU | One bond contract on Hedera |
 
 Imagine:
 
-1. Printing **one official share certificate** (**[Issue bond](./readme-ats.md#issue-bond-and-mint-share)**)
-2. Sending **one copy to each unique pledger** (**[Mint share](./readme-ats.md#issue-bond-and-mint-share)**)
+1. Printing **one official share certificate** (**[Issue bond](./readme-ats.md#issue-bond-and-mint-share)**) — does not give anyone a share or move cash
+2. Sending **one copy to each unique pledger** (**[Mint share](./readme-ats.md#issue-bond-and-mint-share)**) — 1 unit each, not one per ℏ pledged; also puts that wallet on the allowed list
 3. (Optional) minting to another address that is not on the pledge list
-4. Stamping **“cannot be freely sold”** on it (a freeze)
-5. Waiting until **two people** say “yes, pay them” (founder + office)
+4. Stamping **“cannot be freely sold”** on the **whole** bond (**Pause bond**). Not per backer. After this, minting is closed
+5. Waiting until **two people** say “yes, pay them” (founder + office). Those clicks are stored flags, not a second key
 6. Sending a **tiny thank-you** to the **first** minted backer (see below)
 7. **Pay founder** — most of what this listing actually raised, to the wallet on the flyer
-8. **Pay backers** — the rest, split across every wallet that pledged, in proportion to what each sent
+8. **Pay backers** — the rest, split across every wallet that pledged, in proportion to what each sent (even if they never got a mint)
+
+The longer map of this desk: [readme-flow.md](./readme-flow.md#operator-desk-and-the-bond).
 
 That locked certificate is what the app calls an **ATS bond**. Fancy name. Meaning: *this is a restricted IOU, not a joke coin you trade on a meme app.*
 
@@ -194,7 +203,7 @@ The tiny thank-you is separate. That is the later payout. In this demo it is a p
 
 ### What the tiny thank-you is
 
-The tiny thank-you **is the payout**, and it goes to **the backer** — the one address saved on the Operator desk (usually the latest person who pledged).
+The tiny thank-you **is the payout**, and it goes to **the first minted backer** — not every person who pledged.
 
 When the operator clicks **Release coupon**, two things happen:
 
@@ -210,7 +219,7 @@ In **this prototype**, none of that later event happens. There is no real invoic
 So the Operator desk fakes the *last step of the story* in the smallest way that is still real on the network:
 
 - Two people must click yes.
-- Then a speck of play money actually moves to the saved backer (1000 tinybars — **0.00001** of one HBAR).
+- Then a speck of play money actually moves to the first minted backer (1000 tinybars — **0.00001** of one HBAR).
 - Anyone can open the public receipt and see it landed.
 
 **“Prove the payout button works”** means: prove the *machine* works end to end — money in, locked share, two approvals, money out — not prove that backers earned a return.
@@ -275,7 +284,7 @@ The **actual** issue / mint / pause / payout on the network is signed by a play-
 | ATS                                                                                                                         | Asset Tokenization Studio — Hedera’s toolkit for official, rule-bound shares   |
 | Official receipt / certificate                                                                                              | The locked share (the ATS bond). Not the tiny thank-you                        |
 | ATS bond                                                                                                                    | The official locked share / IOU, not a meme coin                               |
-| Coupon / tiny thank-you                                                                                                     | The **Release coupon** speck to the one saved backer. In the story it is their cut later; in this demo it is 0.00001 HBAR to prove the ATS button works |
+| Coupon / tiny thank-you                                                                                                     | The **Release coupon** speck to the **first minted** backer. In the story it is their cut later; in this demo it is 0.00001 HBAR to prove the ATS button works |
 | Settlement / Pay founder / Pay backers                                                                                      | After the same two clicks: most of this listing’s real pledges go to the founder’s wallet; the rest is split back across everyone who pledged |
 | 2-of-2                                                                                                                      | Two people must click yes before money goes out                                |
 | Pause / freeze                                                                                                              | Stamp the share so it cannot be freely moved. The payout follows the **approved holder**, not a stranger who bought it on a marketplace |
