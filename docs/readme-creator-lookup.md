@@ -2,7 +2,7 @@
 
 This note is for anyone who has **no finance or blockchain background**. It explains what happens when you click **Check this creator** on a campaign page.
 
-The app explainer is [readme-non-technical.md](./readme-non-technical.md). The technical README is [README.md](../README.md).
+The app explainer is [readme-non-technical.md](./readme-non-technical.md). How the whole app flows: [readme-flow.md](./readme-flow.md). The technical README is [README.md](../README.md).
 
 ---
 

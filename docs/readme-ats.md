@@ -2,7 +2,7 @@
 
 This note is for anyone who has **little finance or blockchain knowledge**. It explains what ATS is, why it is called a “studio,” and what it can do.
 
-The app explainer is [readme-non-technical.md](./readme-non-technical.md). The technical README is [README.md](../README.md).
+The app explainer is [readme-non-technical.md](./readme-non-technical.md). How the whole app flows: [readme-flow.md](./readme-flow.md). The technical README is [README.md](../README.md).
 
 ---
 

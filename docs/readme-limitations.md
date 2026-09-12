@@ -2,7 +2,7 @@
 
 This note is for anyone who has **no finance or blockchain background**. It states the prototype honestly: the **story** vs the **machine**.
 
-The app explainer is [readme-non-technical.md](./readme-non-technical.md). Check this creator: [readme-creator-lookup.md](./readme-creator-lookup.md). ATS workshop: [readme-ats.md](./readme-ats.md). Technical README: [README.md](../README.md).
+The app explainer is [readme-non-technical.md](./readme-non-technical.md). How the whole app flows: [readme-flow.md](./readme-flow.md). Check this creator: [readme-creator-lookup.md](./readme-creator-lookup.md). ATS workshop: [readme-ats.md](./readme-ats.md). Technical README: [README.md](../README.md).
 
 This is a **hackathon prototype** on Hedera **testnet** (play money). It is not a bank and not a finished crowdfunding product.
 
