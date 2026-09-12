@@ -14,7 +14,7 @@ Example: a shipping company is owed money for a freight job. They will get paid 
 
 This app lets other people chip in a little cash today. When the shipping company finally gets paid, those people are supposed to get a small thank-you payment back.
 
-That is the whole product. Two demo listings ship with the app:
+That is the whole product. Two demo listings ship with the app (see [Invoice receivable bond vs harvest revenue share](#invoice-receivable-bond-vs-harvest-revenue-share)):
 
 - **Harbor Credit** — “Help us wait for a shipping invoice to be paid.”
 - **Northwind Farms** — “Help us grow a greenhouse crop; when we sell it, you get a cut.”
@@ -33,12 +33,87 @@ This is a **hackathon prototype** on play money (Hedera testnet). It is not a ba
 
 **The backer** is you: you read the story, decide if they look honest, then send a small amount of play money.
 
-**The operator** is like the office clerk after the fundraiser. They print the official receipt, lock it so it cannot be casually resold, and only then send the thank-you payment.
+**The operator** is like the office clerk after the fundraiser. They print the official receipt (the locked share — not the thank-you), freeze it so it cannot be casually resold, and only then send the thank-you payment. See [The locked receipt is not the thank-you](#the-locked-receipt-is-not-the-thank-you) and [Who is the operator](#who-is-the-operator).
 
 Two screens, two jobs:
 
 - **Campaign page** = “I want to fund this.”
 - **Operator desk** = “Issue the certificate, lock it, pay the coupon.”
+
+---
+
+## Invoice receivable bond vs harvest revenue share
+
+When you **Start a campaign**, you pick one of these. They are two kinds of “what are we funding?” — the **story** of the listing, not two different apps.
+
+Both mean: chip in **now**, get a cut **later**. The difference is *what* that later money is.
+
+### Invoice receivable bond (Harbor Credit)
+
+Someone already did the work and is **owed a bill**. They wait 90 days for the customer to pay. They need cash today, so backers front the money.
+
+When the customer finally pays the invoice, backers are supposed to get paid back (plus a small extra — the “coupon”).
+
+**Kitchen example:** A baker delivered a wedding cake. The couple will pay in 90 days. The baker borrows from you today against that unpaid bill. When the couple pays, you get your money back.
+
+A **receivable** = money you are owed.  
+A **bond** here = an IOU: “we borrowed from you; we pay you when that bill clears.”
+
+Yes: the baker **already spent his own money** and **already delivered the cake**. The couple still owes him. The bond is how he gets cash **before** those 90 days are up.
+
+**He gets money when backers pledge — today — not when the couple pays.**
+
+1. Baker buys flour, bakes, delivers the cake. His pocket is empty. He is **owed** a bill.
+2. He lists the invoice receivable bond: “Lend me against that unpaid bill.”
+3. **You chip in.** That pledge is the baker’s cash-now. That is the whole point of the raise.
+4. Day 90: the couple pays the cake bill.
+5. That later money is meant to **pay you back** (the coupon / thank-you), not to be the baker’s first payday. He already got paid at step 3.
+
+If nobody pledges, he still waits on the couple, same as without the app.
+
+**Harbor Credit** adds a middleman: the freight desk is the baker; Harbor buys the unpaid bill (so the desk may already have gotten cash from Harbor); then Harbor raises from backers. Same idea: the person who did the work wants money **now**; backers wait for the bill to clear.
+
+### Harvest revenue share (Northwind Farms)
+
+Nobody is owed a bill yet. A farm needs money **to grow a crop**. Backers help with seed, heat, greenhouse costs. When produce is **sold**, backers get a **slice of the sales**, not a fixed “the invoice paid.”
+
+**Kitchen example:** You help a neighbor plant tomatoes. When they sell them at market, you get a cut of the stall’s takings — more if the crop does well, less if it doesn’t.
+
+**Revenue share** = “you get a percentage of what we earn,” not “we repay a specific unpaid invoice.”
+
+The farmer has **not** already been paid for a finished job. They need cash **before** the tomatoes exist.
+
+**The farmer gets money when backers pledge — today — to buy seed and heat. You get a cut later, when the stall sells.**
+
+1. Neighbor wants to plant tomatoes. There is no unpaid bill yet. No crop yet.
+2. They list the harvest revenue share: “Help us grow; you get a slice of sales.”
+3. **You chip in.** That pledge is the farmer’s cash-now (seed, greenhouse, heat). That is the raise.
+4. They grow the crop. If the crop fails, there may be little or nothing to share.
+5. They sell tomatoes at market.
+6. A slice of those sales is meant to **pay you** (the coupon / thank-you). The rest stays with the farmer as their takings after costs.
+
+If nobody pledges, they may not plant — unlike the baker, who already delivered.
+
+The contrast: baker already did the work and is owed a bill; farmer still has to grow something. Both still get the **backers’ money at pledge time**. What happens later is who pays you back (the couple’s bill vs the stall’s sales).
+
+### Side by side
+
+| | Invoice receivable bond | Harvest revenue share |
+|---|---|---|
+| The deal | An unpaid bill already exists | A future harvest will be sold |
+| Demo | Harbor Credit (Rotterdam freight) | Northwind Farms (greenhouse) |
+| Founder gets money | When backers pledge (today). Work is already done. | When backers pledge (today). That cash is used to grow the crop. |
+| Later event | Customer pays the invoice | Produce is sold |
+| Your cut (in the story) | Payback on that IOU | A slice of sales |
+| Risk (in the story) | Customer might not pay the bill | Crop / sales might be weak |
+
+### In *this* app
+
+The choice is mostly a **label and a story**. Pledge, Check this creator, Operator desk, ATS bond, pause, and the tiny thank-you are the **same** for both. The code does not calculate invoice interest vs a % of tomatoes.
+
+Start a campaign → you pick one so the listing reads as “unpaid bill” or “crop share.” Under the hood both still become the same kind of locked ATS bond.
+
+Creating the campaign only prints the story. **Money only moves when someone pledges.** Pledges go to the campaign treasury (the operator’s play-money account), not into a special baker/farmer wallet the moment the listing is created. The later speck is the fake “couple paid / stall sold / pay the backer” step, not the founder’s payday.
 
 ---
 
@@ -90,6 +165,31 @@ That locked certificate is what the app calls an **ATS bond**. Fancy name. Meani
 
 Harbor Credit is already finished on the demo network, so its operator desk is a completed example. Northwind Farms (or a new campaign) is where you walk the whole sequence live.
 
+### The locked receipt is not the thank-you
+
+Two objects are easy to mix up:
+
+| Thing | What it is |
+|---|---|
+| Official receipt / certificate | The **ATS bond** — an IOU that says “this backer funded this deal.” |
+| Tiny thank-you | The **coupon** — a speck of play money sent later |
+
+The operator prints the share, **then** freezes it, **then** (after two people say yes) sends the thank-you. The freeze is on the share, not on the HBAR.
+
+**Why it cannot be casually resold.** In the story this is not a joke coin. It is a restricted IOU, like a private loan note.
+
+The later cut is tied to **who holds the IOU**, not to a moral rule that only the first pledger is allowed to profit.
+
+This share is a **private IOU**, not a public bond. The founder took money from Alice after Alice (and the robot) looked at the deal. The operator is supposed to know who that claim belongs to. If Alice dumps it on a marketplace five minutes later, Bob never went through that, and the office no longer knows who they owe.
+
+If this were a normal listed bond, Bob **would** get the coupon. He bought the claim; the payment follows the current holder. That is a secondary market. This demo is deliberately **not** that. Pause means: no casual flip to a stranger. A later transfer could still happen if the operator checks Bob and allows him — that is “approved holder,” not “free trading.”
+
+So “people who funded” here means **the approved holder of the locked share**, which in the demo is the original backer. It does not mean Alice is the only human who could ever deserve a cut.
+
+The **Pause / freeze** stamp is that rule on the network: the share cannot be freely moved.
+
+The tiny thank-you is separate. That is the later payout. In this demo it is a proof speck (0.00001 HBAR), not the share itself.
+
 ### What the tiny thank-you is
 
 The tiny thank-you **is the payout**, and it goes to **the backer** — the one address saved on the Operator desk (usually the latest person who pledged).
@@ -115,6 +215,23 @@ So the Operator desk fakes the *last step of the story* in the smallest way that
 
 If this were a real product, that button would send a calculated share of the actual cash. Here the amount is tiny on purpose so nobody confuses it with profit. Only **one** backer gets it, not every person who pledged.
 
+### Who is the operator
+
+The operator exists because pledges are just play money sitting in a pot. Someone has to turn that into the locked share and later send the tiny payout. The story is: **money cannot leave on one person’s click.** The founder says yes, the operator says yes, then the speck goes to the backer.
+
+**In a real product** it would be a named office: the campaign’s treasury, a lawyer, a platform admin — someone with the keys to the company wallet, not a random backer.
+
+**In this demo, almost anyone who can open the Operator desk.**
+
+| Button | Who can press it |
+|---|---|
+| Issue / Mint / Pause / Co-sign / Release | Anyone who opens the Operator desk page. There is **no operator login**. |
+| Approve as founder | Anyone **logged in with email** (Privy). The app does **not** check that they are the campaign’s real founder. |
+
+The **actual** issue / mint / pause / payout on the network is signed by a play-money account stored on the server (`HEDERA_OPERATOR_*` keys, or the agent keys if those are missing). Clicking the buttons uses *that* account, not the clicker’s personal pocket. If those keys are missing, Issue stays disabled. You can still look at the page.
+
+**Short example.** Alice pledges from her email login. She is a **backer**. She cannot (in the story) print the bond or pay herself. Bob, who deployed the demo and funded the operator account, opens Operator desk and runs Issue → Coupon. Bob is the **operator**. In the demo, if you know the URL and the server has keys, *you* can be Bob. That is a shortcut, not bank-grade access control.
+
 ---
 
 
@@ -124,7 +241,9 @@ If this were a real product, that button would send a calculated share of the ac
 
 | App word                                                                                                                    | What it really means                                                           |
 | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| Campaign                                                                                                                    | A fundraiser listing                                                           |
+| Asset class                                                                                                                 | The kind of deal: unpaid bill (invoice receivable bond) or crop sales slice (harvest revenue share). Story/label in this demo; same buttons underneath |
+| Invoice receivable bond                                                                                                     | “Help us wait for an unpaid bill.” Harbor Credit. Baker already delivered the cake; couple pays in 90 days |
+| Harvest revenue share                                                                                                       | “Help us grow a crop; you get a cut of sales.” Northwind Farms. Neighbor’s tomatoes at market |
 | Pledge                                                                                                                      | Sending play money to that listing                                             |
 | Check this creator                                                                                                          | Do homework on the founder before sending money                                |
 | Agent                                                                                                                       | A robot that does that homework                                                |
@@ -133,12 +252,13 @@ If this were a real product, that button would send a calculated share of the ac
 | HBAR / Hedera                                                                                                               | The play-money network this demo uses (like monopoly money on a public ledger) |
 | HashScan                                                                                                                    | The public receipt website — anyone can see the payment landed                 |
 | The Graph                                                                                                                   | A live lookup of public lending history (not a screenshot)                     |
-| Operator desk                                                                                                               | Back office: issue the certificate, lock it, pay the coupon                    |
+| Operator / Operator desk                                                                                                    | The back-office person and their page after money came in. In a real product, a named treasury; in this demo, whoever opens the page while the server has operator keys |
 | ATS                                                                                                                         | Asset Tokenization Studio — Hedera’s toolkit for official, rule-bound shares   |
+| Official receipt / certificate                                                                                              | The locked share (the ATS bond). Not the tiny thank-you                        |
 | ATS bond                                                                                                                    | The official locked share / IOU, not a meme coin                               |
 | Coupon / tiny thank-you                                                                                                     | The payout to the saved backer. In the story it is their cut later; in this demo it is a speck of play money to prove money can leave after two approvals |
 | 2-of-2                                                                                                                      | Two people must click yes before money goes out                                |
-| Pause / freeze                                                                                                              | Stamp the share so it cannot be freely moved                                   |
+| Pause / freeze                                                                                                              | Stamp the share so it cannot be freely moved. The payout follows the **approved holder**, not a stranger who bought it on a marketplace |
 | HCS                                                                                                                         | A public stamp-book so the research receipt cannot be quietly rewritten        |
 
 
@@ -161,7 +281,9 @@ Honest limits of the demo:
 - The thank-you payment is a tiny proof, not calculated profit
 - Only **one** share is minted (usually the latest backer), not one per person
 - “Approve as founder” is whoever is logged in, not a bank-grade two-key lock
+- The Operator desk has **no operator login**; Issue / Mint / Pause / Co-sign / Release are open to anyone who can open the URL (the server keys still do the on-chain work)
 - Diligence can be skipped on purpose (**Pledge anyway**)
+- The two listing types (invoice bond vs harvest share) are a **story label**; both still become the same locked ATS bond and the same tiny payout
 - Starting pledged totals on the two demo campaigns are fixtures; only pledges you make in the app have a public receipt
 
 ---

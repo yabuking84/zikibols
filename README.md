@@ -244,7 +244,7 @@ Never commit `.env.local`.
 Two roles share the same app:
 
 - **Backer** — dashboard and campaign page. Check the creator, then pledge.
-- **Operator** — Operator desk. Issue the token, freeze it, release the coupon.
+- **Operator** — back office after money is in. Issue the token, freeze it, release the coupon. Pledges sit in the treasury until this role runs the ATS lifecycle; the story is that money cannot leave on one person’s click.
 
 ### Dashboard (`/`)
 
@@ -292,6 +292,19 @@ Token issue / pause / coupon are **not** on this page. Those live on the Operato
 8. **Release coupon** — enabled only after both approvals **and** the bond is paused. Writes an ATS coupon record, then sends a small HBAR coupon to the backer. HashScan links appear for both.
 
 Coupon size is a lifecycle proof (tinybars), not a real yield calculation.
+
+### Who is the operator
+
+In a real product this would be a named treasury: the campaign office, a lawyer, or a platform admin with the company wallet — not a random backer.
+
+In this demo it is whoever runs the app and put Hedera keys in `.env.local`. On-chain issue / mint / pause / coupon are signed by `HEDERA_OPERATOR_ACCOUNT_ID` + `HEDERA_OPERATOR_PRIVATE_KEY`, or the `HEDERA_AGENT_*` pair if the operator pair is unset. The clicker’s Privy wallet is **not** what signs those txs. Missing keys → Issue stays disabled.
+
+| Button | Who can press it |
+|---|---|
+| Issue / Mint / Pause / Co-sign as treasury / Release coupon | Anyone who opens `/campaigns/<slug>/operate`. There is **no operator login**. |
+| Approve as founder | Anyone **logged in with Privy**. The route stores that wallet string; it does **not** check it against the campaign’s `creatorWallet`. |
+
+That access model is a known gap (see [Known gaps](#known-gaps)): the 2-of-2 is stored flags, not a second key.
 
 ---
 
