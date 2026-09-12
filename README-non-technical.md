@@ -2,7 +2,7 @@
 
 This note explains what the app does.
 
-The technical README is in [README.md](../README.md). This file is the simple version. Flow charts of the whole app: [readme-flow.md](./readme-flow.md).
+The technical README is in [README.md](./README.md). This file is the simple version. Flow charts of the whole app: [README-flow.md](./README-flow.md).
 
 ---
 
@@ -161,14 +161,14 @@ Two piles. Pledging only fills the cash pile.
 
 Imagine:
 
-1. Printing **one official share certificate** (**[Issue bond](./readme-ats.md#issue-bond-and-mint-share)**) — does not give anyone a share or move cash
-2. Sending **one copy to each unique pledger** (**[Mint share](./readme-ats.md#issue-bond-and-mint-share)**) — 1 unit each, not one per ℏ pledged; also puts that wallet on the allowed list
+1. Printing **one official share certificate** (**[Issue bond](./README-ats.md#issue-bond-and-mint-share)**) — does not give anyone a share or move cash
+2. Sending **one copy to each unique pledger** (**[Mint share](./README-ats.md#issue-bond-and-mint-share)**) — 1 unit each, not one per ℏ pledged; also puts that wallet on the allowed list
 3. (Optional) minting to another address that is not on the pledge list
 4. Stamping **“cannot be freely sold”** on the **whole** bond (**Pause bond**). Not per backer. After this, minting is closed and the listing stops taking new pledges
 5. **Pay founder** — most of what this listing actually raised, to the wallet on the flyer
 6. **Pay backers** — the rest, split in proportion to what each sent, but only to the wallets that were handed a copy of the certificate in step 2. If anyone who pledged is still missing theirs, the desk shows a list and pays nobody
 
-The longer map of this desk: [readme-flow.md](./readme-flow.md#operator-desk-and-the-bond).
+The longer map of this desk: [README-flow.md](./README-flow.md#operator-desk-and-the-bond).
 
 That locked certificate is what the app calls an **ATS bond**. Fancy name. Meaning: *this is a restricted IOU, not a joke coin you trade on a meme app.*
 
@@ -282,7 +282,7 @@ It is a prototype showing: *a normal person can fund a real-world-style deal wit
 Honest limits of the demo:
 
 - **Pay founder** / **Pay backers** are a fixed 90 / 10 split of live pledges, on an operator click — no invoice, harvest, or goal check
-- Each unique pledger can get **one** share (not sized to how much they sent) — [how mint and pledge proof work](./readme-ats.md#one-bond-many-holders--what-ats-can-do-vs-what-we-do)
+- Each unique pledger can get **one** share (not sized to how much they sent) — [how mint and pledge proof work](./README-ats.md#one-bond-many-holders--what-ats-can-do-vs-what-we-do)
 - The Operator desk has **no operator login**; Issue / Mint / Pause / Pay founder / Pay backers are open to anyone who can open the URL (the server keys still do the on-chain work; a cap and a reserve limit how much can leave)
 - Diligence can be skipped on purpose (**Pledge anyway**)
 - The two listing types (invoice bond vs harvest share) are a **story label**; both still become the same locked ATS bond

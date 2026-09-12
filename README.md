@@ -21,7 +21,7 @@ A backer can:
 
 Two demo campaigns ship with the app; you can also **Start a campaign**. Missing keys fail on purpose — the dashboard never invents Graph, payment, or founder-search data.
 
-How the app works: [docs/readme-non-technical.md](./docs/readme-non-technical.md). How the whole app flows (diagrams): [docs/readme-flow.md](./docs/readme-flow.md). What **Check this creator** does, step by step: [docs/readme-creator-lookup.md](./docs/readme-creator-lookup.md). What ATS is and can do: [docs/readme-ats.md](./docs/readme-ats.md). What this prototype **can and cannot** do: [docs/readme-limitations.md](./docs/readme-limitations.md). Plan, prize mapping, schedule, and known gaps: [PLAN.md](./PLAN.md).
+How the app works: [README-non-technical.md](./README-non-technical.md). How the whole app flows (diagrams): [README-flow.md](./README-flow.md). What **Check this creator** does, step by step: [README-creator-lookup.md](./README-creator-lookup.md). What ATS is and can do: [README-ats.md](./README-ats.md). What this prototype **can and cannot** do: [README-limitations.md](./README-limitations.md). Plan, prize mapping, schedule, and known gaps: [PLAN.md](./PLAN.md).
 
 ---
 
@@ -292,7 +292,7 @@ Token issue / pause / settlement are **not** on this page. Those live on the Ope
 
 ### As an operator
 
-The desk is the office after money is in. Two piles: **cash** (pledged HBAR in the treasury) and **certificate** (one ATS bond on Hedera). Pledging only fills the cash pile. Longer walk: [docs/readme-flow.md](./docs/readme-flow.md#operator-desk-and-the-bond).
+The desk is the office after money is in. Two piles: **cash** (pledged HBAR in the treasury) and **certificate** (one ATS bond on Hedera). Pledging only fills the cash pile. Longer walk: [README-flow.md](./README-flow.md#operator-desk-and-the-bond).
 
 1. Open **Operator desk** in the sidebar, or go to `/campaigns/<slug>/operate`.
 2. **Issue bond** — deploys an ATS diamond clone on Hedera testnet (factory `0.0.9213391`). You get a contract id and HashScan link. Does not give anyone a share or move HBAR. Once only.
@@ -358,7 +358,7 @@ Bond issuance no longer uses `TokenCreateTransaction`.
 
 ### ATS features used
 
-ATS can do much more (equity, dividends, voting, snapshots, lock, escrow, country lists, Mass Payout). Plain-language catalog: [docs/readme-ats.md](./docs/readme-ats.md). This app uses the slice below (`src/lib/ats.ts`).
+ATS can do much more (equity, dividends, voting, snapshots, lock, escrow, country lists, Mass Payout). Plain-language catalog: [README-ats.md](./README-ats.md). This app uses the slice below (`src/lib/ats.ts`).
 
 | Feature | What it means here | Where |
 |---|---|---|
@@ -390,7 +390,7 @@ ATS can do much more (equity, dividends, voting, snapshots, lock, escrow, countr
 
 ## Known gaps
 
-Product debt we state up front, not hidden behavior. Plain-English walkthrough: [docs/readme-limitations.md](./docs/readme-limitations.md).
+Product debt we state up front, not hidden behavior. Plain-English walkthrough: [README-limitations.md](./README-limitations.md).
 
 | Gap | Detail |
 |---|---|

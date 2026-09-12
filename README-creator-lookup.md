@@ -2,7 +2,7 @@
 
 This note explains what happens when you click **Check this creator** on a campaign page.
 
-The app explainer is [readme-non-technical.md](./readme-non-technical.md). How the whole app flows: [readme-flow.md](./readme-flow.md). The technical README is [README.md](../README.md).
+The app explainer is [README-non-technical.md](./README-non-technical.md). How the whole app flows: [README-flow.md](./README-flow.md). The technical README is [README.md](./README.md).
 
 ---
 
@@ -252,4 +252,4 @@ If the research tools are not plugged in, the app **refuses to fake it**. It say
 4. Open the HashScan links if you want to see the tiny payments and the stamp.
 5. Then log in and pledge — or click **Pledge anyway** if you are skipping on purpose.
 
-That is the whole lookup. Sending money is the next page in [readme-non-technical.md](./readme-non-technical.md#if-you-open-the-site-as-a-curious-backer).
+That is the whole lookup. Sending money is the next page in [README-non-technical.md](./README-non-technical.md#if-you-open-the-site-as-a-curious-backer).

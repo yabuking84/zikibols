@@ -2,7 +2,7 @@
 
 This note is a **map**. It shows who does what, in what order, and where the campaign vs the ATS bond live.
 
-The longer explainer is [readme-non-technical.md](./readme-non-technical.md). ATS in plain English: [readme-ats.md](./readme-ats.md). Check this creator: [readme-creator-lookup.md](./readme-creator-lookup.md). What the prototype can and cannot do: [readme-limitations.md](./readme-limitations.md). Technical README: [README.md](../README.md).
+The longer explainer is [README-non-technical.md](./README-non-technical.md). ATS in plain English: [README-ats.md](./README-ats.md). Check this creator: [README-creator-lookup.md](./README-creator-lookup.md). What the prototype can and cannot do: [README-limitations.md](./README-limitations.md). Technical README: [README.md](./README.md).
 
 This is a **hackathon prototype** on Hedera testnet (play money).
 
@@ -82,7 +82,7 @@ flowchart TD
 
 **HCS** is a public fingerprint of that note (and the payment receipts) so nobody can quietly swap the text later.
 
-Step-by-step of this click: [readme-creator-lookup.md](./readme-creator-lookup.md).
+Step-by-step of this click: [README-creator-lookup.md](./README-creator-lookup.md).
 
 ---
 
@@ -109,7 +109,7 @@ flowchart TD
   pause --> backerPay[10_percent_split_to_pledgers]
 ```
 
-Button-by-button: [Issue bond and Mint share](./readme-ats.md#issue-bond-and-mint-share).
+Button-by-button: [Issue bond and Mint share](./README-ats.md#issue-bond-and-mint-share).
 
 ### 1. Issue bond
 
@@ -164,7 +164,7 @@ Issue first is the usual path. Mint cannot run before Issue. Mint cannot run aft
 
 **Mint every pledger before you Pause.** The desk refuses to pause while anyone is unminted. Pause closes minting and new pledges, and **Pay backers** needs every pledger to hold a share.
 
-ATS is the printer and the rulebook. The bond is the locked receipt. The HBAR is the cash. More on the workshop: [readme-ats.md](./readme-ats.md).
+ATS is the printer and the rulebook. The bond is the locked receipt. The HBAR is the cash. More on the workshop: [README-ats.md](./README-ats.md).
 
 ---
 

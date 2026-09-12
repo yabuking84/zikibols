@@ -2,7 +2,7 @@
 
 This note states the prototype honestly: the **story** vs the **machine**.
 
-The app explainer is [readme-non-technical.md](./readme-non-technical.md). How the whole app flows: [readme-flow.md](./readme-flow.md). Check this creator: [readme-creator-lookup.md](./readme-creator-lookup.md). ATS workshop: [readme-ats.md](./readme-ats.md). Technical README: [README.md](../README.md).
+The app explainer is [README-non-technical.md](./README-non-technical.md). How the whole app flows: [README-flow.md](./README-flow.md). Check this creator: [README-creator-lookup.md](./README-creator-lookup.md). ATS workshop: [README-ats.md](./README-ats.md). Technical README: [README.md](./README.md).
 
 This is a **hackathon prototype** on Hedera **testnet** (play money). It is not a bank and not a finished crowdfunding product.
 
@@ -28,7 +28,7 @@ End to end, with play money:
 | **Check this creator** | Live look-up of three lending books (The Graph), optional public-web search (Tavily), paid risk note. The **app’s robot** pays two tiny Hedera fees, not the backer. A public **fingerprint** can land on HCS. |
 | **Log in** | Email / social via Privy. An embedded wallet is created. No seed phrase. |
 | **Pledge** | Real HBAR transfer on Hedera testnet from that wallet to the **campaign treasury**. A labeled row is written in `state.json` (`pledges`) so the progress bar knows which flyer it was for. |
-| **Operator desk** | [Issue bond](./readme-ats.md#issue-bond-and-mint-share) prints the ATS contract; [Mint share](./readme-ats.md#issue-bond-and-mint-share) hands **one** unit **per unique pledger** (a 13 ℏ pledge still mints 1, not 13); then pause. |
+| **Operator desk** | [Issue bond](./README-ats.md#issue-bond-and-mint-share) prints the ATS contract; [Mint share](./README-ats.md#issue-bond-and-mint-share) hands **one** unit **per unique pledger** (a 13 ℏ pledge still mints 1, not 13); then pause. |
 | **Settlement** (this app’s word) | **Pay founder** sends 90% of what this campaign actually raised to the wallet on the listing, and **Pay backers** splits the other 10% pro-rata among backers **holding a minted share**, in one transfer. If any pledger has no share, a modal lists them and nothing is paid. Real HBAR, real HashScan txs, capped and refused if the treasury would drop below its gas reserve. This is **closing the raise**, not paying the bond back. |
 
 Missing keys fail on purpose. The dashboard does not invent Graph numbers, web hits, or payment receipts.
@@ -46,7 +46,7 @@ Play-money receipts (pledges, x402 fees, HCS stamps, issued bonds, mints, pause,
 - **Calculate a real return.** The backer split is a flat 10% of the raise handed back pro-rata. That is not yield, and it is not the principal repayment.
 - **Pay out more than the cap.** Each payout refuses above `PAYOUT_MAX_HBAR` (100 ℏ) and refuses to take the treasury below `PAYOUT_RESERVE_HBAR` (50 ℏ), because that same jar pays the robot’s x402 fees and ATS gas. A 12,000 ℏ raise cannot actually be settled here.
 - **One jar per campaign.** All listings share `NEXT_PUBLIC_CAMPAIGN_TREASURY`. Hedera does not know “this 50 ℏ was for the bike frame.” The `campaignSlug` on the clipboard does — so if you delete the clipboard before settling, the split is gone even though the coins are not.
-- **Mint one share per HBAR pledged.** A 13 ℏ pledge still mints **1** unit, not 13. Each unique pledger can get one certificate of the same bond; Alice who sent 13 ℏ and Bob who sent 50 ℏ both hold 1. How much they sent stays on the HashScan pledge tx and in `pledges`, not on the share balance. ATS can mint *N* units for *N* ℏ; we do not. See [One bond, many holders](./readme-ats.md#one-bond-many-holders--what-ats-can-do-vs-what-we-do).
+- **Mint one share per HBAR pledged.** A 13 ℏ pledge still mints **1** unit, not 13. Each unique pledger can get one certificate of the same bond; Alice who sent 13 ℏ and Bob who sent 50 ℏ both hold 1. How much they sent stays on the HashScan pledge tx and in `pledges`, not on the share balance. ATS can mint *N* units for *N* ℏ; we do not. See [One bond, many holders](./README-ats.md#one-bond-many-holders--what-ats-can-do-vs-what-we-do).
 
 ### ATS (the bond workshop)
 
@@ -61,7 +61,7 @@ ATS **can** do more than this app uses. This prototype is not “ATS cannot pay.
 | Store the Kickstarter page (story, city, who pledged) | **No.** ATS holds the **certificate**, not the flyer |
 | Empty the pledge jar into the **founder’s** pocket | **Not an ATS job.** We do it ourselves: a plain treasury → founder HBAR transfer on **Pay founder** |
 
-**Start a campaign does not create an ATS bond.** [Issue bond](./readme-ats.md#issue-bond-and-mint-share) on the Operator desk does. [Mint share](./readme-ats.md#issue-bond-and-mint-share) is the later click that hands **one** unit to a pledger — the same size whether they sent 13 ℏ or 50 ℏ, repeat per unique wallet.
+**Start a campaign does not create an ATS bond.** [Issue bond](./README-ats.md#issue-bond-and-mint-share) on the Operator desk does. [Mint share](./README-ats.md#issue-bond-and-mint-share) is the later click that hands **one** unit to a pledger — the same size whether they sent 13 ℏ or 50 ℏ, repeat per unique wallet.
 
 If you delete `.data/state.json` after a bond was issued, HashScan still has the contract. The website forgets the name, city, and story unless those ids are saved again. There is no “retrieve the listing from ATS” button.
 

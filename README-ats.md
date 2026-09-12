@@ -2,7 +2,7 @@
 
 This note explains what ATS is, why it is called a “studio,” and what it can do.
 
-The app explainer is [readme-non-technical.md](./readme-non-technical.md). How the whole app flows: [readme-flow.md](./readme-flow.md). The technical README is [README.md](../README.md).
+The app explainer is [README-non-technical.md](./README-non-technical.md). How the whole app flows: [README-flow.md](./README-flow.md). The technical README is [README.md](./README.md).
 
 ---
 
@@ -40,7 +40,7 @@ A **token** here means a **digital certificate of ownership** (like a share cert
 
 **A government or company bond.** “Lend us money, we pay you interest on a schedule.” ATS has a **bond** type for that.
 
-**This app.** Harbor Credit’s invoice and Northwind’s harvest share. The Operator desk uses ATS to print one locked certificate, mint **one unit per unique pledger**, and freeze it — instead of inventing a joke coin. Sending the raise to the founder and splitting a cut back to every pledger is a **plain treasury transfer**, not an ATS Mass Payout. See [Settlement](./readme-non-technical.md#settlement--the-founders-payday). Units are **one each**, not sized to the pledge — [One bond, many holders](#one-bond-many-holders--what-ats-can-do-vs-what-we-do).
+**This app.** Harbor Credit’s invoice and Northwind’s harvest share. The Operator desk uses ATS to print one locked certificate, mint **one unit per unique pledger**, and freeze it — instead of inventing a joke coin. Sending the raise to the founder and splitting a cut back to every pledger is a **plain treasury transfer**, not an ATS Mass Payout. See [Settlement](./README-non-technical.md#settlement--the-founders-payday). Units are **one each**, not sized to the pledge — [One bond, many holders](#one-bond-many-holders--what-ats-can-do-vs-what-we-do).
 
 ---
 
@@ -104,7 +104,7 @@ Example: you can gift a bookstore gift card to a friend; you usually cannot free
 
 **Coupon (bond interest / scheduled extra)**  
 A planned extra payment to bond holders.  
-Example: “Every 90 days, pay the invoice backers a little extra.” Zikibols does not use this ATS tool. **Pay founder** / **Pay backers** send HBAR from the treasury instead. See [Settlement](./readme-non-technical.md#settlement--the-founders-payday).
+Example: “Every 90 days, pay the invoice backers a little extra.” Zikibols does not use this ATS tool. **Pay founder** / **Pay backers** send HBAR from the treasury instead. See [Settlement](./README-non-technical.md#settlement--the-founders-payday).
 
 **Dividend (profit share for equity)**  
 If the company/building made money, send holders a cut.  
@@ -224,7 +224,7 @@ Issue bond  →  Mint share (each unique pledger)  →  Pause bond
 4. **Unpause bond** — peel that stamp back off. The desk drops to step 2: transfers work again, minting reopens, the listing takes pledges, and Pay founder / Pay backers go back to waiting for a pause. The button only shows while the bond is paused, and it refuses once either payout has run — a settled raise cannot reopen, because new pledges would arrive after the split was already sent.
 5. **Pay founder** / **Pay backers** — 90 / 10 of the live raise from the treasury. **Pay backers** only pays wallets holding a share, and refuses to run at all while any pledger is unminted (a modal lists them). Mint everyone **before** Pause, since Pause closes minting.
 
-The cash pile and the certificate pile are different. Full walk: [readme-flow.md](./readme-flow.md#operator-desk-and-the-bond).
+The cash pile and the certificate pile are different. Full walk: [README-flow.md](./README-flow.md#operator-desk-and-the-bond).
 
 ---
 
@@ -246,6 +246,6 @@ What is still **off** the bond:
 
 **Pay backers** pays only wallets that hold a unit, and will not run until every pledger has one. The **amount** each holder gets still comes from their pledge row, not from the share balance — the units themselves are not proportional (13 ℏ and 50 ℏ both get 1 unit).
 
-Honest list of other holes: [readme-limitations.md](./readme-limitations.md).
+Honest list of other holes: [README-limitations.md](./README-limitations.md).
 
 Hedera’s own docs: [Asset Tokenization Studio](https://docs.hedera.com/solutions/tokenization/ats).
