@@ -12,15 +12,6 @@ import {
 } from "@/lib/ats";
 import { alreadyMinted } from "@/lib/mints";
 
-function errorText(error: unknown) {
-  if (error instanceof Error) return error.message;
-  if (typeof error === "string") return error;
-  if (error && typeof error === "object" && "message" in error) {
-    return String((error as { message: unknown }).message);
-  }
-  return "";
-}
-
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> },
@@ -113,11 +104,6 @@ export async function POST(
     }
 
     if (body.action === "freeze") {
-      const holders = [
-        ...campaign.mints.map((mint) => mint.accountId),
-        campaign.backerAccountId || getBackerAccountId() || "",
-      ].filter(Boolean);
-      const unique = [...new Set(holders)];
       const canFreeze =
         campaign.tokenLifecycle === "transferred" ||
         campaign.tokenLifecycle === "issued";
@@ -130,12 +116,13 @@ export async function POST(
       if (!campaign.tokenId) {
         return NextResponse.json({ error: "Issue the ATS bond first" }, { status: 400 });
       }
-      for (const holder of unique) {
-        try {
-          await controlListBacker(campaign.tokenId, holder);
-        } catch (error) {
-          if (!/already in the control list/i.test(errorText(error))) throw error;
-        }
+      // Mint already put each holder on the allowed list. Only list leftovers
+      // (saved / env backer) so Pause does not re-add and trip SDK error 20013.
+      const leftovers = [campaign.backerAccountId || getBackerAccountId() || ""].filter(
+        (id) => id && !alreadyMinted(campaign.mints, id),
+      );
+      for (const holder of leftovers) {
+        await controlListBacker(campaign.tokenId, holder);
       }
       const paused = await pauseBond(campaign.tokenId);
       const updated = await patchCampaign(slug, {

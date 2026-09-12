@@ -41,6 +41,9 @@ function isAlreadyOnControlList(message: string) {
 
 function formatAtsError(action: string | undefined, raw: string) {
   if (isAlreadyOnControlList(raw)) {
+    if (action === "freeze") {
+      return "That wallet is already on the allowed list from mint. Refresh the desk — Pause may still have landed.";
+    }
     return "This backer is already on the allowed list. Refresh the desk — their share may have minted, or mint the next pledger.";
   }
   if (/timeout|aborted|abort/i.test(raw)) {
@@ -151,7 +154,7 @@ export function TokenPanel({ slug }: { slug: string }) {
         : (lifecycle === "issued" || lifecycle === "transferred") && pendingCount > 0
           ? `Next: mint a share to each pledger (${mintedCount} of ${holders.length} done).`
           : lifecycle === "transferred" || lifecycle === "issued"
-            ? "Next: pause the bond (compliance control)."
+            ? "Next: pause the bond. Each mint already put that backer on the allowed list."
             : lifecycle === "frozen"
               ? "Next: both founders sign, then release the coupon."
               : "Coupon paid.";
@@ -199,7 +202,7 @@ export function TokenPanel({ slug }: { slug: string }) {
           disabled={Boolean(busy) || !canFreeze}
           onClick={() => post(`/api/campaigns/${slug}/token`, { action: "freeze" })}
         >
-          {busy === "freeze" ? "Pausing…" : "Pause / control list"}
+          {busy === "freeze" ? "Pausing…" : "Pause bond"}
         </Button>
       </div>
       <div className="space-y-2">

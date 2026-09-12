@@ -324,21 +324,32 @@ export async function issueBond(campaign: Campaign) {
   };
 }
 
-export async function mintToBacker(securityId: string, backer: string) {
-  await ensureConnected();
+function alreadyOnControlList(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return /already in the control list|20013/i.test(message);
+}
+
+/** Mint already lists each backer. Calling add again just makes the SDK log 20013. */
+async function ensureOnControlList(securityId: string, backer: string) {
   const target = await resolveEvmAddress(backer);
   try {
-    await Security.addToControlList(
+    const added = await Security.addToControlList(
       new ControlListRequest({ securityId, targetId: target }),
     );
+    return { transactionId: txId(added), recipient: target, alreadyListed: false };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "";
-    if (!/already in the control list/i.test(message)) throw error;
+    if (!alreadyOnControlList(error)) throw error;
+    return { transactionId: "", recipient: target, alreadyListed: true };
   }
+}
+
+export async function mintToBacker(securityId: string, backer: string) {
+  await ensureConnected();
+  const listed = await ensureOnControlList(securityId, backer);
   const issued = await Security.issue(
-    new IssueRequest({ securityId, targetId: target, amount: "1" }),
+    new IssueRequest({ securityId, targetId: listed.recipient, amount: "1" }),
   );
-  return { transactionId: txId(issued), recipient: target };
+  return { transactionId: txId(issued), recipient: listed.recipient };
 }
 
 export async function pauseBond(securityId: string) {
@@ -354,11 +365,7 @@ export async function unpauseBond(securityId: string) {
 
 export async function controlListBacker(securityId: string, backer: string) {
   await ensureConnected();
-  const target = await resolveEvmAddress(backer);
-  const added = await Security.addToControlList(
-    new ControlListRequest({ securityId, targetId: target }),
-  );
-  return { transactionId: txId(added), recipient: target };
+  return ensureOnControlList(securityId, backer);
 }
 
 /** On-chain coupon entitlement. Not Mass Payout — HBAR still moves via payCoupon. */
